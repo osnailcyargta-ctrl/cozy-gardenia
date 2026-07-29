@@ -1,0 +1,191 @@
+/* Merchant: restock dial and the three stock cards. */
+
+.restock {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 6rem;
+  height: 6rem;
+  flex: none;
+}
+
+.restock__ring {
+  position: absolute;
+  inset: 0;
+  transform: rotate(-90deg);
+}
+
+.restock__track,
+.restock__progress {
+  fill: none;
+  stroke-width: 6;
+  stroke-linecap: round;
+}
+
+.restock__track {
+  stroke: rgba(47, 74, 56, 0.12);
+}
+
+.restock__progress {
+  stroke: var(--honey);
+  transition: stroke-dashoffset 250ms linear;
+  filter: drop-shadow(0 0 4px rgba(242, 179, 61, 0.5));
+}
+
+.restock__text {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.restock__label {
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.restock__time {
+  font-size: 0.82rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--leaf-deep);
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------- stock list -- */
+
+.stock-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-3);
+}
+
+@media (min-width: 44rem) {
+  .stock-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--sp-4);
+  }
+}
+
+.stock-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.96), rgba(248, 240, 226, 0.92));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-top: 4px solid var(--rarity-common);
+  box-shadow: var(--sh-2), var(--sh-inset);
+  animation: stock-in var(--dur) var(--ease-out) backwards;
+  animation-delay: var(--enter-delay, 0ms);
+  transition: transform var(--dur) var(--ease-out), box-shadow var(--dur) var(--ease-out);
+}
+
+.stock-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-3), var(--sh-inset);
+}
+
+.stock-card--common { border-top-color: var(--rarity-common); }
+.stock-card--uncommon { border-top-color: var(--rarity-uncommon); }
+.stock-card--rare { border-top-color: var(--rarity-rare); }
+.stock-card--legendary { border-top-color: var(--rarity-legendary); }
+
+.stock-card.is-sold {
+  opacity: 0.6;
+  filter: saturate(0.55);
+}
+
+@keyframes stock-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+
+.stock-card__art {
+  display: grid;
+  place-items: center;
+  padding: var(--sp-3);
+  border-radius: var(--r-md);
+  background:
+    radial-gradient(70% 60% at 50% 20%, rgba(255, 244, 214, 0.9) 0%, rgba(255, 244, 214, 0) 70%),
+    linear-gradient(180deg, #F3EEDF 0%, #E8DFC9 100%);
+  box-shadow: inset 0 1px 3px rgba(47, 74, 56, 0.1);
+}
+
+.stock-card__art .seed-icon {
+  width: 5.5rem;
+  height: 5.5rem;
+  filter: drop-shadow(0 4px 6px rgba(47, 74, 56, 0.2));
+}
+
+.stock-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  align-items: flex-start;
+  flex: 1;
+}
+
+.stock-card__name {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--leaf-deep);
+}
+
+.stock-card__blurb {
+  font-size: 0.82rem;
+  color: var(--text-soft);
+  font-style: italic;
+}
+
+.stock-card__stats {
+  display: flex;
+  gap: var(--sp-4);
+  width: 100%;
+  padding-top: var(--sp-2);
+  border-top: 1px dashed var(--border-strong);
+}
+
+.stock-card__stats div {
+  display: flex;
+  flex-direction: column;
+}
+
+.stock-card__stats dt {
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.stock-card__stats dd {
+  font-size: 0.95rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--terracotta-deep);
+}
+
+.stock-card__footer {
+  margin-top: auto;
+}
+
+.stock-card__sold {
+  display: block;
+  padding: var(--sp-2);
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-faint);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-pill);
+}

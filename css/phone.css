@@ -1,0 +1,92 @@
+/* The Coming Soon component — used by the Phone tab. */
+
+.coming-soon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  border-radius: var(--r-xl);
+  background: linear-gradient(180deg, rgba(255, 253, 247, 0.94), rgba(248, 240, 226, 0.88));
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px dashed var(--border-strong);
+  box-shadow: var(--sh-2), var(--sh-inset);
+}
+
+.coming-soon__glyph {
+  font-size: 3.25rem;
+  line-height: 1;
+  filter: drop-shadow(0 4px 8px rgba(47, 74, 56, 0.22));
+  animation: float 4.5s var(--ease-soft) infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  50% { transform: translateY(-8px) rotate(3deg); }
+}
+
+.coming-soon__title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--leaf-deep);
+}
+
+.coming-soon__text {
+  max-width: 30rem;
+  color: var(--text-soft);
+  font-size: 0.92rem;
+}
+
+/* -------------------------------------------------------------- teasers -- */
+
+.teasers {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-2);
+  width: 100%;
+  max-width: 34rem;
+  margin-top: var(--sp-3);
+}
+
+@media (min-width: 44rem) {
+  .teasers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.teaser {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  text-align: left;
+  border-radius: var(--r-md);
+  background: var(--surface-sunk);
+  border: 1px solid var(--border);
+}
+
+.teaser__icon {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  flex: none;
+}
+
+.teaser__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.teaser__title {
+  font-weight: 800;
+  font-size: 0.9rem;
+  color: var(--leaf-deep);
+}
+
+.teaser__text {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+}

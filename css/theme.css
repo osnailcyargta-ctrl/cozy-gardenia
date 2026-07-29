@@ -1,0 +1,189 @@
+/* Design tokens — warm dawn garden. */
+
+:root {
+  /* Core palette */
+  --cream: #FFF6E6;
+  --cream-deep: #F4E4C8;
+  --terracotta: #C97B54;
+  --terracotta-deep: #9A5537;
+  --moss: #6C9A63;
+  --leaf-deep: #2F4A38;
+  --honey: #F2B33D;
+  --honey-deep: #C98A16;
+  --sky: #BFE3EF;
+  --sky-deep: #8CC7DC;
+
+  /* Semantic */
+  --bg: #E8F2E4;
+  --surface: rgba(255, 250, 240, 0.86);
+  --surface-solid: #FFFAF0;
+  --surface-sunk: rgba(47, 74, 56, 0.06);
+  --border: rgba(47, 74, 56, 0.14);
+  --border-strong: rgba(47, 74, 56, 0.26);
+  --text: #2C3A2E;
+  --text-soft: #64705F;
+  --text-faint: #8B968A;
+  --focus: var(--honey);
+
+  --good: #4E9070;
+  --warn: #C97B54;
+  --dry: #C4763B;
+
+  /* Rarity */
+  --rarity-common: #8FA98A;
+  --rarity-uncommon: #5B9BD5;
+  --rarity-rare: #A472D6;
+  --rarity-legendary: #F2B33D;
+
+  /* Spacing scale */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+
+  /* Radii */
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 30px;
+  --r-pill: 999px;
+
+  /* Elevation — layered, soft, warm-tinted */
+  --sh-1: 0 1px 2px rgba(47, 74, 56, 0.08), 0 2px 6px rgba(47, 74, 56, 0.06);
+  --sh-2: 0 2px 4px rgba(47, 74, 56, 0.08), 0 8px 20px rgba(47, 74, 56, 0.10);
+  --sh-3: 0 4px 8px rgba(47, 74, 56, 0.10), 0 18px 40px rgba(47, 74, 56, 0.16);
+  --sh-inset: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 160ms;
+  --dur: 280ms;
+  --dur-slow: 520ms;
+
+  --font: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", sans-serif;
+  --font-display: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+
+  --tabbar-h: 4.75rem;
+}
+
+body {
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--bg);
+}
+
+.rarity {
+  display: inline-block;
+  padding: 0.1em 0.6em;
+  border-radius: var(--r-pill);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #fff;
+  background: var(--rarity-color, var(--rarity-common));
+  white-space: nowrap;
+}
+
+.rarity--common { --rarity-color: var(--rarity-common); }
+.rarity--uncommon { --rarity-color: var(--rarity-uncommon); }
+.rarity--rare { --rarity-color: var(--rarity-rare); }
+.rarity--legendary {
+  --rarity-color: var(--rarity-legendary);
+  color: #6B4A0C;
+}
+
+/* ------------------------------------------------------------- buttons -- */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 var(--sp-4);
+  border-radius: var(--r-pill);
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--leaf-deep);
+  background: linear-gradient(180deg, #FFFFFF, var(--cream-deep));
+  box-shadow: var(--sh-1), var(--sh-inset);
+  border: 1px solid var(--border);
+  transition: transform var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out),
+              filter var(--dur-fast) var(--ease-out);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: var(--sh-2), var(--sh-inset);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: var(--sh-1);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  filter: saturate(0.5);
+  box-shadow: none;
+}
+
+.btn .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex: none;
+}
+
+.btn--plant {
+  color: #fff;
+  background: linear-gradient(180deg, #7FB073, var(--moss));
+  border-color: rgba(47, 74, 56, 0.25);
+}
+
+.btn--water {
+  color: #12414F;
+  background: linear-gradient(180deg, #B6E4F5, var(--sky-deep));
+  border-color: rgba(18, 65, 79, 0.2);
+}
+
+.btn--harvest {
+  color: #6B4A0C;
+  background: linear-gradient(180deg, #FFD98A, var(--honey));
+  border-color: rgba(107, 74, 12, 0.22);
+}
+
+.btn--buy {
+  color: #6B4A0C;
+  background: linear-gradient(180deg, #FFE0A3, var(--honey));
+  border-color: rgba(107, 74, 12, 0.22);
+}
+
+.btn--ghost {
+  color: var(--text-soft);
+  background: var(--surface-sunk);
+  border-style: dashed;
+  border-color: var(--border-strong);
+  box-shadow: none;
+}
+
+.icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
