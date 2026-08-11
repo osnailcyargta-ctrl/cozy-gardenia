@@ -4,6 +4,7 @@ import { iconCanvas } from './icons.js';
 import { ITEM_DEFS } from '../data/items.js';
 import { ORES_PER_COAL, SECONDS_PER_ORE } from '../systems/smelting.js';
 import { sfx } from '../engine/audio.js';
+import * as hotbar from './hotbar.js';
 
 /* ============================================================
    Smelter
@@ -55,8 +56,7 @@ export function refreshSmelter() {
     if (usable) {
       el.addEventListener('click', () => {
         const r = sm.start(inv, d.id);
-        if (!r.ok) { game.toast(r.why, 'bad'); sfx.denied(); }
-        else sfx.ui();
+        if (!r.ok) sfx.denied(); else sfx.ui();
         refreshSmelter();
         game.refreshInventory();
       });
@@ -140,7 +140,7 @@ export function refreshAnvil() {
   anvilOut.innerHTML = '';
   anvilOut.appendChild(iconCanvas('iron_sword'));
   anvilOut.insertAdjacentHTML('beforeend',
-    `<span class="nm">Iron Sword</span><span class="qty">3 dmg · 2 blocks</span>`);
+    `<span class="nm">Iron Sword</span><span class="qty">18 dmg · 2 blocks</span>`);
 
   forgeBtn.disabled = !ok || inv.count('iron_sword') > 0;
   if (inv.count('iron_sword') > 0) {
@@ -165,11 +165,12 @@ function onForge() {
   }
 
   inv.remove('iron_bar', RECIPE.need.iron_bar);
-  inv.add('iron_sword', 1);
+  // Straight into the hotbar when there is room. With 0-damage fists, a sword
+  // stranded in a lower row reads as a broken game rather than a misplaced item.
+  if (!hotbar.placeInHotbar('iron_sword', 1)) inv.add('iron_sword', 1);
   anvilMsg.textContent = 'The blade is yours.';
   anvilMsg.className = 'ok';
   sfx.forge();
-  game.toast('Forged: Iron Sword', 'good');
   game.refreshInventory();
   refreshAnvil();
 }

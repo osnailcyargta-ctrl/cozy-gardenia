@@ -18,10 +18,6 @@
   <!-- ============ HUD ============ -->
   <div id="hud" class="hidden">
     <div id="hearts"></div>
-    <div id="weapon-slot">
-      <canvas id="weapon-icon" width="24" height="24"></canvas>
-      <span id="weapon-name">Fists</span>
-    </div>
     <div id="room-label"></div>
     <div id="boss-bar" class="hidden">
       <div id="boss-name">Dragon King</div>
@@ -29,8 +25,10 @@
     </div>
   </div>
 
-  <div id="prompt" class="hidden"><b>E</b><span></span></div>
-  <div id="toasts"></div>
+  <div id="hotbar-wrap" class="hidden">
+    <div id="hotbar-name"></div>
+    <div id="hotbar"></div>
+  </div>
 
   <!-- ============ Title ============ -->
   <div id="title-screen">
@@ -38,12 +36,6 @@
       <h1>Into<span>the</span>Book</h1>
       <p class="sub">A tale of a greedy dragon</p>
       <button id="start-btn">Open your eyes</button>
-      <ul class="controls">
-        <li><b>WASD</b> move</li>
-        <li><b>E</b> interact</li>
-        <li><b>Q</b> inventory</li>
-        <li><b>LMB</b> attack</li>
-      </ul>
     </div>
   </div>
 
@@ -79,7 +71,6 @@
           <div class="book-label">Sealed</div>
         </div>
       </div>
-      <p class="hint">Press <b>Esc</b> to step back</p>
     </div>
   </div>
 
@@ -95,7 +86,6 @@
         <div id="chest-grid" class="grid"></div>
       </div>
     </div>
-    <p class="hint float-hint"><b>LMB</b> move one &nbsp;·&nbsp; <b>RMB</b> move stack &nbsp;·&nbsp; <b>Q</b>/<b>Esc</b> close</p>
   </div>
 
   <!-- ============ Smelter ============ -->
@@ -115,10 +105,8 @@
         <div class="smelt-col">
           <div class="lbl">Fuel</div>
           <div id="fuel-box"></div>
-          <div class="lbl small">1 coal burns 3 ore<br>10s per ore</div>
         </div>
       </div>
-      <p class="hint">Press <b>Esc</b> to close</p>
     </div>
   </div>
 
@@ -133,7 +121,6 @@
       </div>
       <button id="forge-btn">Forge</button>
       <div id="anvil-msg"></div>
-      <p class="hint">Press <b>Esc</b> to close</p>
     </div>
   </div>
 

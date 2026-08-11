@@ -45,8 +45,10 @@ export class Prop {
     // lost in the room rather than the thing the whole hub is built around.
     this.scale = type === 'shelf' ? 2 : 1;
 
-    // interaction reach, measured from the player's feet
-    this.reach = type === 'shelf' ? 22 : 18;
+    // Interaction reach, measured to the prop's box. Generous on purpose: with
+    // no on-screen prompt telling you when you are in range, a tight radius
+    // reads as "E is broken" rather than "stand closer".
+    this.reach = type === 'shelf' ? 34 : 26;
   }
 
   update(dt, room) {

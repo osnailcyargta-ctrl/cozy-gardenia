@@ -50,8 +50,8 @@ export class Gate {
       return 'blocked';
     }
 
-    // bare hands cannot hurt wood
-    if (weapon?.isFist) {
+    // bare hands cannot hurt wood (and deal 0 anyway)
+    if (weapon?.isFist || damage <= 0) {
       this.shake = 0.18;
       sfx.hitWood();
       P.burst(this.x, this.y, 3, { colour: '#7a5a38', speed: 25, life: 0.25, size: 1 });

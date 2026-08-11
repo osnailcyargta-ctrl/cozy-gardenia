@@ -23,6 +23,7 @@ import * as hud from './ui/hud.js';
 import * as invUI from './ui/inventoryUI.js';
 import * as craftUI from './ui/craftUI.js';
 import * as shelfUI from './ui/shelfUI.js';
+import * as hotbar from './ui/hotbar.js';
 
 /* ============================================================
    Game state
@@ -41,7 +42,7 @@ const game = {
   paused: false,
   time: 0,
 
-  toast: hud.toast,
+  toast: () => {},
   refreshInventory,
   syncWeapon,
   enterBook,
@@ -58,6 +59,7 @@ resize();
 invUI.init(game);
 craftUI.init(game);
 shelfUI.init(game);
+hotbar.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
@@ -90,6 +92,7 @@ function goToLibrary() {
   game.room._player = game.player;
   syncWeapon();
   hud.show();
+  hotbar.show();
   hud.setRoom(LIBRARY.name);
   hud.setHearts(game.player.hp, game.player.maxHp);
   hud.hideBoss();
@@ -254,11 +257,8 @@ function resolveSwing() {
       const r = gate.strike(w.damage, w, p.x, p.y);
       hitAnything = true;
       if (r === 'blocked' && w.isFist && gate.kind === 'wood') {
-        hud.toast('Your fists cannot break wood', 'bad');
       } else if (r === 'blocked' && gate.kind === 'locked') {
-        hud.toast('Locked. Something here holds the key.', 'bad');
       } else if (r === 'broken') {
-        hud.toast('The gate splinters open', 'good');
       }
     }
   }
@@ -275,7 +275,6 @@ function tryUnlockGate() {
   if (game.inventory.has('key', 1)) {
     game.inventory.remove('key', 1);
     gate.unlock();
-    hud.toast('The key turns. The way opens.', 'good');
     refreshInventory();
   }
 }
@@ -286,14 +285,17 @@ function tryUnlockGate() {
 
 function syncWeapon() {
   if (!game.player) return;
-  const has = game.inventory.count('iron_sword') > 0;
-  const w = has ? ITEM_DEFS.iron_sword.weapon : FIST;
-  if (game.player.weapon !== w) game.player.weapon = w;
-  hud.setWeapon(w);
+  // Whatever sits in the selected hotbar slot is what you swing. No auto-equip:
+  // holding coal means your swing does nothing, because fists deal 0.
+  const held = game.inventory.slots[hotbar.selectedIndex()];
+  const w = (held && ITEM_DEFS[held.id]?.weapon) || FIST;
+  game.player.weapon = w;
+  hotbar.refresh();
 }
 
 function refreshInventory() {
   invUI.refresh();
+  hotbar.refresh();
   craftUI.refreshSmelter();
   craftUI.refreshAnvil();
   syncWeapon();
@@ -402,11 +404,9 @@ function update(dt) {
   if (produced) {
     const left = game.inventory.add(produced, 1);
     if (left > 0) {
-      hud.toast('Satchel full — bar left in the forge', 'bad');
       game.smelter.progress = 1;   // hold it until there's room
       game.smelter.oreId = game.smelter.oreId || null;
     } else {
-      hud.toast(`Smelted: ${ITEM_DEFS[produced].name}`, 'good');
       sfx.pickup();
     }
     refreshInventory();
@@ -443,6 +443,7 @@ function update(dt) {
 
   P.update(dt);
   cam.update(dt);
+  hotbar.update(dt);
 
   // --- hud ---
   hud.setHearts(p.hp, p.maxHp);
@@ -451,9 +452,6 @@ function update(dt) {
   if (boss) {
     if (!boss.dead) hud.updateBoss(boss.hp, boss.maxHp, boss.phase);
   }
-
-  const near = room.nearestInteractive(p);
-  hud.setPrompt(near && !p.dead ? near.label : null);
 
   // --- death ---
   if (p.dead && !deathShown && p.deathT > 1.1) {
@@ -464,20 +462,20 @@ function update(dt) {
 }
 
 function handleKeys(popups) {
-  // Q toggles the satchel; Esc backs out of whatever is open
-  if (input.pressed('KeyQ')) {
-    if (invUI.isOpen()) { invUI.close(); closeChests(); }
-    else if (!popups) { invUI.open(null); sfx.uiBig(); }
+  // Esc is a long reach from WASD when one hand stays on QWEASD and the other
+  // on the mouse, so E and Q close panels too — including the one that opened.
+  const closeKey = input.pressed('KeyQ') || input.pressed('KeyE') || input.pressed('Escape');
+
+  if (popups) {
+    if (closeKey) { closeAllPopups(); sfx.ui(); }
+    return;
   }
 
-  if (input.pressed('Escape')) {
-    if (popups) { closeAllPopups(); sfx.ui(); }
-  }
+  if (input.pressed('KeyQ')) { invUI.open(null); sfx.uiBig(); }
 
   // debug: toggle the post-processing chain
   if (input.pressed('F1')) {
     FX.bloom = FX.fog = FX.vignette = FX.grain = FX.aberration = !FX.bloom;
-    hud.toast('Effects ' + (FX.bloom ? 'on' : 'off'));
   }
 }
 

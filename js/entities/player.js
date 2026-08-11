@@ -21,8 +21,8 @@ export class Player {
     this.vx = 0; this.vy = 0;
     this.hw = 4; this.hh = 5;      // collision box is small: feet only
     this.radius = 6;
-    this.maxHp = 20;
-    this.hp = 20;
+    this.maxHp = 100;
+    this.hp = 100;
     this.facing = 'down';
     this.flip = false;
     this.anim = 0;

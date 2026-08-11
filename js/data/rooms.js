@@ -23,12 +23,25 @@ const BLANK = SHELL([
   '##############################',
 ]);
 
-/** Copy BLANK and punch exits into it. */
+/**
+ * Copy BLANK and punch exits into it.
+ *
+ * The exit must be a real doorway, not a gap in an open field. An earlier
+ * version left column 28 as floor on every row, so the gate at column 27 stood
+ * in the middle of open ground and the player could simply walk around it —
+ * skipping the entire forge chain. Columns 28-29 are therefore wall everywhere
+ * except the two doorway rows, so the gate is the only way through.
+ */
 function shell({ right = false, left = false }) {
   const rows = BLANK.slice();
+
+  // seal the right side: col 28 and 29 become wall on every row
+  for (let y = 2; y <= 13; y++) rows[y] = rows[y].slice(0, 28) + '##';
+
   if (right) {
-    rows[7] = '#' + '.'.repeat(27) + 'EE';
-    rows[8] = '#' + '.'.repeat(27) + 'EE';
+    // col 28 = threshold the gate sits in, col 29 = the exit trigger
+    rows[7] = rows[7].slice(0, 28) + '.E';
+    rows[8] = rows[8].slice(0, 28) + '.E';
   }
   if (left) {
     rows[7] = 'BB' + rows[7].slice(2);
@@ -103,7 +116,7 @@ export const BOOK1_ROOMS = [
       { type: 'torch',   x: 312, y: 216 },
       { type: 'torch',   x: 456, y: 200 },
     ],
-    gate: { tx: 27, ty: 7, kind: 'wood', hp: 12 },
+    gate: { tx: 28, ty: 7, kind: 'wood', hp: 72 },
     enemies: [],
     exitTo: 1,
     backTo: 'library',
@@ -123,8 +136,8 @@ export const BOOK1_ROOMS = [
       { type: 'coinPile', x: 64,  y: 184 },
       { type: 'coinPile', x: 416, y: 72  },
       { type: 'coinPile', x: 416, y: 184 },
-      { type: 'coinPile', x: 40,  y: 128 },
-      { type: 'coinPile', x: 440, y: 128 },
+      { type: 'coinPile', x: 40,  y: 96  },
+      { type: 'coinPile', x: 408, y: 96  },
       { type: 'torch', x: 152, y: 40  },
       { type: 'torch', x: 328, y: 40  },
       { type: 'torch', x: 152, y: 216 },
@@ -132,7 +145,7 @@ export const BOOK1_ROOMS = [
       { type: 'torch', x: 24,  y: 40  },
       { type: 'torch', x: 456, y: 40  },
     ],
-    gate: { tx: 27, ty: 7, kind: 'locked' },
+    gate: { tx: 28, ty: 7, kind: 'locked' },
     enemies: [
       { type: 'servant', tier: 1, x: 300, y: 72  },
       { type: 'servant', tier: 1, x: 300, y: 184 },
@@ -154,8 +167,8 @@ export const BOOK1_ROOMS = [
       '#............................#',
       '#............................#',
       '#............................#',
-      'BB...........................#',
-      'BB...........................#',
+      'B............................#',
+      'B............................#',
       '#............................#',
       '#............................#',
       '#............................#',
@@ -181,7 +194,7 @@ export const BOOK1_ROOMS = [
       { type: 'torch', x: 24,  y: 128 },
     ],
     gate: null,
-    enemies: [{ type: 'king', x: 340, y: 124 }],
+    enemies: [{ type: 'king', x: 330, y: 118 }],
     exitTo: null,
     backTo: null,
   },

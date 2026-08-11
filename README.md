@@ -13,8 +13,8 @@ open is **Greedy Ass Dragon**, and it runs three rooms deep:
 
 1. **The Cold Forge** — no enemies, three stations. A chest holds 1 coal and 3 iron ore. The smelter
    burns three ores per coal, ten seconds each. The anvil turns three iron bars into an iron sword.
-   The exit is barred by a 12 HP wooden gate that your fists cannot touch, so the forge is not
-   optional.
+   The exit is barred by a 72 HP wooden gate, and **fists deal no damage to anything at all**, so
+   the forge is not optional — it is the only way to become able to hurt something.
 2. **Hall of Coin** — three dragon's servants over piles of gold. Two tier I, one tier II that hits
    harder, dashes twice, and drops the key to the next gate.
 3. **The Hoard** — the **Dragon King**, 300 HP across two phases. At half health his wings tear
@@ -27,12 +27,31 @@ open is **Greedy Ass Dragon**, and it runs three rooms deep:
 | `WASD` / arrows | Move |
 | `E` | Interact (shelf, smelter, chest, anvil) |
 | `Q` | Satchel (4×4) |
-| Left click | Attack |
+| Scroll wheel / `1`–`4` | Switch hotbar slot |
+| Left click | Attack with the selected slot |
 | Right click | Interact |
 | Left click *in inventory* | Move **one** item |
 | Right click *in inventory* | Move the **whole stack** |
-| `Esc` | Close any panel |
+| `E`, `Q` or `Esc` | Close any panel |
 | `F1` | Toggle post-processing (debug) |
+
+Panels close with `E` and `Q`, not just `Esc` — one hand stays on QWEASD and the
+other on the mouse, and `Esc` is a long reach from there.
+
+The top row of the satchel is the hotbar, and **the selected slot is your
+weapon**. There is no auto-equip: scroll to a slot holding coal and your swing
+does nothing, because bare hands deal zero damage.
+
+## Numbers
+
+| | |
+|---|---|
+| Player | 100 HP (10 hearts) |
+| Fists | **0 damage** — cannot hurt enemies, wood, or anything else |
+| Iron sword | 18 damage · 2 blocks reach |
+| Wooden gate | 72 HP → 4 sword hits |
+| Dragon's Servant I / II | 45 HP / 90 HP (tier II has 3 armour) |
+| Dragon King | 300 HP → 17 sword hits, phase 2 at 150 |
 
 ## How it looks the way it does
 

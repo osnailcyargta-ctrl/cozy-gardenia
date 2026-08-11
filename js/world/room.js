@@ -136,13 +136,11 @@ export class Room {
         if (left === 0) {
           d.dead = true;
           sfx.pickup();
-          game.toast(`+${d.count} ${d.id.replace(/_/g, ' ')}`, 'good');
           P.burst(d.x, d.y, 6, {
             colour: '#f0cc5a', speed: 40, life: 0.35, size: 1,
             glow: 8, glowColour: 'rgba(240,204,90,ALPHA)',
           });
         } else {
-          game.toast('Satchel is full', 'bad');
           d.magnet = 0;
           d.x += (Math.random() - 0.5) * 20;
           d.y += (Math.random() - 0.5) * 20;

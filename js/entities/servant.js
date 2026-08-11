@@ -16,8 +16,8 @@ const R = decodeSet(SERVANT, 'servant');
 const L = flipSet(R, 'servantL');
 
 const TIER = {
-  1: { hp: 9,  damage: 2, dashDamage: 4, speed: 46, dashes: 1, armour: 0, scale: 1,    tint: null,      light: 'rgba(230,110,40,ALPHA)' },
-  2: { hp: 18, damage: 3, dashDamage: 6, speed: 54, dashes: 2, armour: 1, scale: 1.18, tint: '#6b1f8f', light: 'rgba(200,70,220,ALPHA)' },
+  1: { hp: 45, damage: 10, dashDamage: 20, speed: 46, dashes: 1, armour: 0, scale: 1,    tint: null,      light: 'rgba(230,110,40,ALPHA)' },
+  2: { hp: 90, damage: 15, dashDamage: 30, speed: 54, dashes: 2, armour: 3, scale: 1.18, tint: '#6b1f8f', light: 'rgba(200,70,220,ALPHA)' },
 };
 
 // state machine, in order
@@ -58,7 +58,9 @@ export class Servant {
 
   hurt(amount, fromX, fromY) {
     if (this.dead) return;
-    const dealt = Math.max(1, amount - this.cfg.armour);
+    // A fist (0) must stay 0 — the floor only applies to real weapons.
+    const dealt = amount <= 0 ? 0 : Math.max(1, amount - this.cfg.armour);
+    if (dealt <= 0) return 0;
     this.hp -= dealt;
     this.hurtFlash = 0.22;
     sfx.hit();

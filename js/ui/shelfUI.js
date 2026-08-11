@@ -24,7 +24,6 @@ function onPick(el) {
 
   if (el.classList.contains('locked')) {
     sfx.denied();
-    game.toast('Sealed. This story is not yours yet.', 'bad');
     // re-trigger the rattle even if the pointer never left
     el.classList.remove('locked-shake');
     void el.offsetWidth;

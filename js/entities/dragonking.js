@@ -32,8 +32,8 @@ export class DragonKing {
     // Drawn at 2x: a 40x32 sprite reads as a trinket next to a 16px player,
     // not as the thing the whole book builds toward. Hitbox follows the art.
     this.scale = 2;
-    this.hw = 26; this.hh = 18;
-    this.radius = 32;
+    this.hw = 34; this.hh = 22;
+    this.radius = 40;
     this.hp = MAX_HP;
     this.maxHp = MAX_HP;
     this.phase = 1;
@@ -63,13 +63,13 @@ export class DragonKing {
   }
 
   /** Where fire comes out — tracks the sprite's mouth. */
-  mouthX() { return this.x + (this.flip ? -30 : 30); }
-  mouthY() { return this.y + 6; }
+  mouthX() { return this.x + (this.flip ? -44 : 44); }
+  mouthY() { return this.y + 14; }
 
   get script() { return this.phase === 1 ? SCRIPT_1 : SCRIPT_2; }
 
   hurt(amount, fromX, fromY) {
-    if (this.dead || this.invisible) return 0;
+    if (this.dead || this.invisible || amount <= 0) return 0;
     this.hp -= amount;
     this.hurtFlash = 0.18;
     sfx.hit();
@@ -232,9 +232,9 @@ export class DragonKing {
           glow: 12, glowColour: 'rgba(230,110,40,ALPHA)',
         });
 
-        if (!this.hitThisDash && dist < 26) {
+        if (!this.hitThisDash && dist < 40) {
           this.hitThisDash = true;
-          player.hurt(5, this.x, this.y);
+          player.hurt(22, this.x, this.y);
           cam.shake(8, 0.35);
         }
         if (this.t > 0.5) { this.state = 'recover'; this.t = 0; }
@@ -257,7 +257,7 @@ export class DragonKing {
           this.volleyLeft--;
           const a = Math.atan2(player.y - this.mouthY(), player.x - this.mouthX());
           this.projectiles.push(new Fireball(this.mouthX(), this.mouthY(), a, {
-            damage: 3,
+            damage: 12,
             speed: 92,
             turn: this.phase === 2 ? 2.9 : 2.2,
             homeFor: this.phase === 2 ? 1.9 : 1.5,
@@ -277,7 +277,7 @@ export class DragonKing {
         if (this.t > 0.25) {
           this.state = 'laser';
           this.t = 0;
-          this.projectiles.push(new Laser(this, ang, { damage: 4, len: 560 }));
+          this.projectiles.push(new Laser(this, ang, { damage: 18, len: 560 }));
         }
         break;
 
@@ -371,7 +371,7 @@ export class DragonKing {
     ctx.globalAlpha = this.alpha * 0.45;
     ctx.fillStyle = '#000';
     ctx.beginPath();
-    ctx.ellipse(Math.round(this.x), Math.round(this.y + 28), 36, 8, 0, 0, Math.PI * 2);
+    ctx.ellipse(Math.round(this.x), Math.round(this.y + 34), 46, 9, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
 
