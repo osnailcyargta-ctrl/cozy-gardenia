@@ -1,0 +1,31 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: #05040a;
+  overflow: hidden;
+  font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  color: #cbb9a0;
+  -webkit-font-smoothing: antialiased;
+}
+
+body { user-select: none; -webkit-user-select: none; cursor: default; }
+
+#stage {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 45%, #14101f 0%, #08060e 60%, #04030800 100%),
+    #04030a;
+}
+
+#screen {
+  display: block;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  background: #06050c;
+}
+
+.hidden { display: none !important; }

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>Into the Book</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text y='14' font-size='14'>%F0%9F%90%89</text></svg>">
+<link rel="stylesheet" href="css/reset.css">
+<link rel="stylesheet" href="css/ui.css">
+<link rel="stylesheet" href="css/popups.css">
+<link rel="stylesheet" href="css/animations.css">
+</head>
+<body>
+
+<div id="stage">
+  <canvas id="screen"></canvas>
+
+  <!-- ============ HUD ============ -->
+  <div id="hud" class="hidden">
+    <div id="hearts"></div>
+    <div id="weapon-slot">
+      <canvas id="weapon-icon" width="24" height="24"></canvas>
+      <span id="weapon-name">Fists</span>
+    </div>
+    <div id="room-label"></div>
+    <div id="boss-bar" class="hidden">
+      <div id="boss-name">Dragon King</div>
+      <div id="boss-track"><div id="boss-fill"></div><div id="boss-lag"></div></div>
+    </div>
+  </div>
+
+  <div id="prompt" class="hidden"><b>E</b><span></span></div>
+  <div id="toasts"></div>
+
+  <!-- ============ Title ============ -->
+  <div id="title-screen">
+    <div class="title-inner">
+      <h1>Into<span>the</span>Book</h1>
+      <p class="sub">A tale of a greedy dragon</p>
+      <button id="start-btn">Open your eyes</button>
+      <ul class="controls">
+        <li><b>WASD</b> move</li>
+        <li><b>E</b> interact</li>
+        <li><b>Q</b> inventory</li>
+        <li><b>LMB</b> attack</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- ============ Shelf popup ============ -->
+  <div id="shelf-popup" class="overlay hidden">
+    <div class="panel shelf-panel">
+      <h2>The Shelf</h2>
+      <div class="books">
+        <div class="book" data-book="0">
+          <div class="book-3d">
+            <div class="cover front"><span class="book-title">Greedy Ass Dragon</span></div>
+            <div class="pages"></div>
+            <div class="cover back"></div>
+          </div>
+          <div class="book-label">Greedy Ass Dragon</div>
+        </div>
+        <div class="book locked" data-book="1">
+          <div class="book-3d">
+            <div class="cover front"><span class="book-title">???</span></div>
+            <div class="pages"></div>
+            <div class="cover back"></div>
+          </div>
+          <div class="chain"><div class="lock"></div></div>
+          <div class="book-label">Sealed</div>
+        </div>
+        <div class="book locked" data-book="2">
+          <div class="book-3d">
+            <div class="cover front"><span class="book-title">???</span></div>
+            <div class="pages"></div>
+            <div class="cover back"></div>
+          </div>
+          <div class="chain"><div class="lock"></div></div>
+          <div class="book-label">Sealed</div>
+        </div>
+      </div>
+      <p class="hint">Press <b>Esc</b> to step back</p>
+    </div>
+  </div>
+
+  <!-- ============ Inventory / chest ============ -->
+  <div id="inv-popup" class="overlay hidden">
+    <div class="panel inv-panel">
+      <div class="inv-side">
+        <h2>Satchel</h2>
+        <div id="inv-grid" class="grid"></div>
+      </div>
+      <div class="inv-side" id="chest-side">
+        <h2 id="chest-title">Chest</h2>
+        <div id="chest-grid" class="grid"></div>
+      </div>
+    </div>
+    <p class="hint float-hint"><b>LMB</b> move one &nbsp;·&nbsp; <b>RMB</b> move stack &nbsp;·&nbsp; <b>Q</b>/<b>Esc</b> close</p>
+  </div>
+
+  <!-- ============ Smelter ============ -->
+  <div id="smelter-popup" class="overlay hidden">
+    <div class="panel smelter-panel">
+      <h2>Smelter</h2>
+      <div class="smelter-body">
+        <div class="smelt-col">
+          <div class="lbl">Ore</div>
+          <div id="smelt-choices"></div>
+        </div>
+        <div class="smelt-col forge">
+          <div id="forge-mouth"><div id="forge-fire"></div></div>
+          <div id="smelt-progress"><div id="smelt-fill"></div></div>
+          <div id="smelt-status">Idle</div>
+        </div>
+        <div class="smelt-col">
+          <div class="lbl">Fuel</div>
+          <div id="fuel-box"></div>
+          <div class="lbl small">1 coal burns 3 ore<br>10s per ore</div>
+        </div>
+      </div>
+      <p class="hint">Press <b>Esc</b> to close</p>
+    </div>
+  </div>
+
+  <!-- ============ Anvil ============ -->
+  <div id="anvil-popup" class="overlay hidden">
+    <div class="panel anvil-panel">
+      <h2>Anvil</h2>
+      <div class="recipe">
+        <div class="ing" id="anvil-in"></div>
+        <div class="arrow">→</div>
+        <div class="ing" id="anvil-out"></div>
+      </div>
+      <button id="forge-btn">Forge</button>
+      <div id="anvil-msg"></div>
+      <p class="hint">Press <b>Esc</b> to close</p>
+    </div>
+  </div>
+
+  <!-- ============ Death / victory ============ -->
+  <div id="fade" class="hidden"></div>
+  <div id="death-screen" class="overlay hidden">
+    <div class="panel center-panel">
+      <h2 class="dead">You died</h2>
+      <p>The story rewinds a page.</p>
+      <button id="respawn-btn">Continue</button>
+    </div>
+  </div>
+  <div id="victory-screen" class="overlay hidden">
+    <div class="panel center-panel">
+      <h2 class="won">The dragon falls</h2>
+      <p>The hoard is quiet at last. The book closes itself.</p>
+      <button id="victory-btn">Return to the library</button>
+    </div>
+  </div>
+
+  <div id="book-transition" class="hidden"><div class="page-flip"></div></div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
