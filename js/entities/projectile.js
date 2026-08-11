@@ -25,10 +25,47 @@ export class Fireball {
     this.trailT = 0;
     // homing fades out so the fireball can be dodged at the last moment
     this.homeFor = opts.homeFor ?? 1.5;
+
+    // Fireballs can be batted out of the air. Integrity is a pool rather than a
+    // swing counter so mixing weapons on one fireball still behaves sensibly:
+    // the sword chips 5 (2 swings), bare hands chip 2 (5 swings).
+    this.breakable = true;
+    this.maxIntegrity = 10;
+    this.integrity = 10;
+    this.chipFlash = 0;
+  }
+
+  /** Take a swing. Returns true if this swing destroyed the fireball. */
+  strike(weapon, fromX, fromY) {
+    if (this.dead) return false;
+    const chip = weapon?.projectileChip ?? 2;
+    this.integrity -= chip;
+    this.chipFlash = 0.18;
+
+    if (this.integrity <= 0) {
+      sfx.hit();
+      cam.shake(3, 0.16);
+      P.burst(this.x, this.y, 20, {
+        colour: '#ffeaa8', speed: 120, life: 0.45, size: 2, drag: 0.88,
+        glow: 14, glowColour: 'rgba(255,200,110,ALPHA)',
+      });
+      this.pop();
+      return true;
+    }
+
+    // survived: spit sparks back toward the swing so a partial hit still reads
+    sfx.hitWood();
+    P.burst(this.x, this.y, 8, {
+      colour: '#ffb648', speed: 80, life: 0.3, size: 2, drag: 0.9,
+      angle: Math.atan2(this.y - fromY, this.x - fromX), spread: 1.6,
+      glow: 8, glowColour: 'rgba(255,170,60,ALPHA)',
+    });
+    return false;
   }
 
   update(dt, player, map) {
     this.t += dt;
+    this.chipFlash = Math.max(0, this.chipFlash - dt);
     this.life -= dt;
     if (this.life <= 0) { this.pop(); return; }
 
@@ -82,21 +119,29 @@ export class Fireball {
   }
 
   draw(ctx) {
-    const f = 1 + Math.sin(this.t * 30) * 0.16;
+    // Shrinks as it is chipped, and stutters harder the closer it is to
+    // breaking — the player needs to see that the first swing landed.
+    const wear = this.integrity / this.maxIntegrity;
+    const size = 0.55 + wear * 0.45;
+    const jitter = this.chipFlash > 0 ? (Math.random() - 0.5) * 2 : 0;
+    const f = (1 + Math.sin(this.t * 30) * 0.16) * size;
+
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
+    const x = this.x + jitter, y = this.y + jitter;
     // layered core: dark red -> orange -> white centre
     ctx.fillStyle = '#8f2f16';
-    ctx.beginPath(); ctx.arc(this.x, this.y, 5 * f, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 5 * f, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = '#e87a2c';
-    ctx.beginPath(); ctx.arc(this.x, this.y, 3.4 * f, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#ffeaa8';
-    ctx.beginPath(); ctx.arc(this.x, this.y, 1.7 * f, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(x, y, 3.4 * f, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = this.chipFlash > 0 ? '#ffffff' : '#ffeaa8';
+    ctx.beginPath(); ctx.arc(x, y, 1.7 * f, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
   drawLight(ctx) {
-    addLight(ctx, this.x, this.y, 48, 'rgba(255,150,50,ALPHA)', 0.9);
+    const wear = this.integrity / this.maxIntegrity;
+    addLight(ctx, this.x, this.y, 48 * (0.6 + wear * 0.4), 'rgba(255,150,50,ALPHA)', 0.9 * (0.55 + wear * 0.45));
   }
 }
 
@@ -110,6 +155,9 @@ const FADE = 0.25;
 
 export class Laser {
   constructor(owner, angle, opts = {}) {
+    // Not breakable: this is a continuous beam whose origin is the boss's
+    // mouth, not a discrete object flying through the air.
+    this.breakable = false;
     this.owner = owner;
     this.angle = angle;
     this.damage = opts.damage ?? 4;

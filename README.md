@@ -52,6 +52,13 @@ does nothing, because bare hands deal zero damage.
 | Wooden gate | 72 HP → 4 sword hits |
 | Dragon's Servant I / II | 45 HP / 90 HP (tier II has 3 armour) |
 | Dragon King | 300 HP → 17 sword hits, phase 2 at 150 |
+| Fireball | destructible — **2 sword swings** or **5 bare-handed** |
+
+Fireballs can be batted out of the air. That is not damage, which is why bare
+hands can do it at all — it just takes five swings instead of two. The mouth
+laser is a continuous beam and cannot be broken. A volley fires three fireballs
+0.3s apart while a sword swing costs 0.36s, so you can never clear a whole
+volley — dodging is still the plan, swinging is the option.
 
 ## How it looks the way it does
 

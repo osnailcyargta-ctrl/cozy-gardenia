@@ -251,15 +251,20 @@ function resolveSwing() {
     }
   }
 
+  // Fireballs can be batted out of the air. This is not damage — bare hands
+  // deal zero — so it is resolved through the projectile's own integrity pool.
+  for (const pr of room.projectiles()) {
+    if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + (pr.radius || 4), pr.x, pr.y)) {
+      pr.strike(w, p.x, p.y);
+      hitAnything = true;
+    }
+  }
+
   const gate = room.gate;
   if (gate && !gate.open) {
     if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + 12, gate.x, gate.y)) {
-      const r = gate.strike(w.damage, w, p.x, p.y);
+      gate.strike(w.damage, w, p.x, p.y);
       hitAnything = true;
-      if (r === 'blocked' && w.isFist && gate.kind === 'wood') {
-      } else if (r === 'blocked' && gate.kind === 'locked') {
-      } else if (r === 'broken') {
-      }
     }
   }
 

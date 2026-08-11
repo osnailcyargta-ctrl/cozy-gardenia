@@ -100,6 +100,20 @@ export class Room {
     this.drops.push(new Drop(id, x, y, count));
   }
 
+  /**
+   * Every live projectile in the room that a swing could connect with. Only the
+   * boss fires anything today, but going through the room keeps main.js from
+   * reaching into `room.boss.projectiles` directly.
+   */
+  projectiles() {
+    const out = [];
+    for (const e of this.enemies) {
+      if (!e.projectiles) continue;
+      for (const pr of e.projectiles) if (!pr.dead && pr.breakable) out.push(pr);
+    }
+    return out;
+  }
+
   update(dt, player, game) {
     this.enteredT += dt;
 
