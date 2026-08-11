@@ -27,6 +27,7 @@ open is **Greedy Ass Dragon**, and it runs three rooms deep:
 | `WASD` / arrows | Move |
 | `E` | Interact (shelf, smelter, chest, anvil) |
 | `Q` | Satchel (4×4) |
+| `Space` or `F` | Dash (i-frames, 0.75s cooldown) |
 | Scroll wheel / `1`–`4` | Switch hotbar slot |
 | Left click | Attack with the selected slot |
 | Right click | Interact |
@@ -53,12 +54,14 @@ does nothing, because bare hands deal zero damage.
 | Dragon's Servant I / II | 45 HP / 90 HP (tier II has 3 armour) |
 | Dragon King | 300 HP → 17 sword hits, phase 2 at 150 |
 | Fireball | destructible — **2 sword swings** or **5 bare-handed** |
+| Dash | ~60px burst, i-frames while dashing, 0.75s cooldown |
 
 Fireballs can be batted out of the air. That is not damage, which is why bare
-hands can do it at all — it just takes five swings instead of two. The mouth
-laser is a continuous beam and cannot be broken. A volley fires three fireballs
-0.3s apart while a sword swing costs 0.36s, so you can never clear a whole
-volley — dodging is still the plan, swinging is the option.
+hands can do it at all — it just takes five swings instead of two. A struck
+fireball stalls in place for half a second: without that the feature is
+impossible, because a fireball is only inside sword reach for 50-160ms while
+the swing cooldown is 360ms, so a second hit could never land. The mouth laser
+is a continuous beam and cannot be broken.
 
 ## How it looks the way it does
 

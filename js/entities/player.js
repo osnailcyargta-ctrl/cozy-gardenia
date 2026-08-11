@@ -15,6 +15,13 @@ const SPEED = 74;
 const ACCEL = 900;
 const FRICTION = 0.0001;
 
+// Dash: a short committed burst, not a speed toggle. The i-frames are the whole
+// point — it exists so a telegraphed laser or a servant dash can be answered.
+const DASH_SPEED = 700;
+const DASH_TIME = 0.19;
+const DASH_COOLDOWN = 0.75;
+const DASH_IFRAMES = 0.26;
+
 export class Player {
   constructor(x, y) {
     this.x = x; this.y = y;
@@ -42,6 +49,38 @@ export class Player {
 
     this.bobT = 0;
     this.stepT = 0;
+
+    this.dashT = 0;
+    this.dashCd = 0;
+    this.dashX = 1; this.dashY = 0;
+    this.ghosts = [];        // afterimages, drawn behind the player
+  }
+
+  get dashing() { return this.dashT > 0; }
+
+  /** Returns true if the dash actually started. */
+  startDash(dx, dy) {
+    if (this.dashCd > 0 || this.dashing || this.dead) return false;
+    // no direction held: dash the way you are facing
+    if (!dx && !dy) {
+      if (this.facing === 'side') { dx = this.flip ? -1 : 1; dy = 0; }
+      else if (this.facing === 'up') { dx = 0; dy = -1; }
+      else { dx = 0; dy = 1; }
+    }
+    const l = Math.hypot(dx, dy) || 1;
+    this.dashX = dx / l; this.dashY = dy / l;
+    this.dashT = DASH_TIME;
+    this.dashCd = DASH_COOLDOWN;
+    this.invuln = Math.max(this.invuln, DASH_IFRAMES);
+    this.ghosts.length = 0;
+    sfx.dash();
+
+    P.burst(this.x, this.y + 4, 10, {
+      colour: '#6d8cc0', speed: 70, life: 0.3, size: 2, drag: 0.88,
+      angle: Math.atan2(-this.dashY, -this.dashX), spread: 1.2,
+      glow: 8, glowColour: 'rgba(150,180,255,ALPHA)',
+    });
+    return true;
   }
 
   get attacking() { return this.attackT > 0; }
@@ -120,6 +159,31 @@ export class Player {
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.attackT = Math.max(0, this.attackT - dt);
+    this.dashCd = Math.max(0, this.dashCd - dt);
+
+    // ---- dash overrides normal movement entirely ----
+    if (this.dashT > 0) {
+      this.dashT -= dt;
+      const k = Math.max(0.25, this.dashT / DASH_TIME);   // eases out
+      moveAgainst(map, solids, this,
+        this.dashX * DASH_SPEED * k * dt, this.dashY * DASH_SPEED * k * dt);
+
+      this.ghosts.push({ x: this.x, y: this.y, life: 0.22, spr: this.sprite() });
+      if (this.ghosts.length > 5) this.ghosts.shift();
+
+      P.spawn({
+        x: this.x, y: this.y + 4,
+        vx: -this.dashX * 40, vy: -this.dashY * 40,
+        life: 0.26, size: 2, colour: '#4a6595', drag: 0.9,
+      });
+
+      this.anim += dt * 14;
+      for (const g of this.ghosts) g.life -= dt;
+      this.ghosts = this.ghosts.filter((g) => g.life > 0);
+      return;
+    }
+    for (const g of this.ghosts) g.life -= dt;
+    this.ghosts = this.ghosts.filter((g) => g.life > 0);
 
     const ax = axis();
     const target = { x: ax.x * SPEED, y: ax.y * SPEED };
@@ -191,7 +255,7 @@ export class Player {
     }
 
     // blink while invulnerable, but never fully disappear
-    if (this.invuln > 0 && Math.floor(this.invuln * 22) % 2 === 0) return;
+    if (!this.dashing && this.invuln > 0 && Math.floor(this.invuln * 22) % 2 === 0) return;
 
     const spr = this.sprite();
     const bob = this.moving ? 0 : Math.sin(this.bobT * 2.4) * 0.5;
@@ -201,6 +265,10 @@ export class Player {
     ctx.beginPath();
     ctx.ellipse(Math.round(this.x), Math.round(this.y + 7), 5, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
+
+    for (const g of this.ghosts) {
+      draw(ctx, silhouette(g.spr, '#6d8cc0'), g.x, g.y - 1, { alpha: g.life / 0.22 * 0.45 });
+    }
 
     draw(ctx, spr, this.x, this.y - 1 + bob);
 

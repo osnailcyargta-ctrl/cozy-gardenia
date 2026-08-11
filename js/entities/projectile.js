@@ -33,6 +33,7 @@ export class Fireball {
     this.maxIntegrity = 10;
     this.integrity = 10;
     this.chipFlash = 0;
+    this.knockT = 0;        // >0 while it is flying away from a swing
   }
 
   /** Take a swing. Returns true if this swing destroyed the fireball. */
@@ -53,11 +54,28 @@ export class Fireball {
       return true;
     }
 
-    // survived: spit sparks back toward the swing so a partial hit still reads
+    // Survived — so stagger it in place.
+    //
+    // Without this the feature is impossible: a fireball is only inside sword
+    // reach for 50-160ms while the swing cooldown is 360ms, so a second hit on
+    // the same one can never land. Knocking it far away doesn't work either —
+    // it can't turn around fast enough to come back. Stalling it just outside
+    // the player is what actually buys the follow-up swing, and it reads as
+    // the fireball reeling from the blow.
+    // Heading is deliberately left alone. Flipping it to face away looks right
+    // for one frame and then breaks everything: at 2.3 rad/s the fireball needs
+    // ~1.4s to turn back around, so it just wanders off and the rally dies. It
+    // stalls in place instead, and the recoil is sold by the flash and sparks.
+    const away = Math.atan2(this.y - fromY, this.x - fromX);
+    this.speed = 8;              // stalls where you hit it
+    this.knockT = 0.5;           // longer than either weapon's cooldown
+    this.t = 0;                  // restart the homing ramp from scratch
+
     sfx.hitWood();
-    P.burst(this.x, this.y, 8, {
-      colour: '#ffb648', speed: 80, life: 0.3, size: 2, drag: 0.9,
-      angle: Math.atan2(this.y - fromY, this.x - fromX), spread: 1.6,
+    cam.shake(2, 0.1);
+    P.burst(this.x, this.y, 10, {
+      colour: '#ffb648', speed: 90, life: 0.32, size: 2, drag: 0.9,
+      angle: away, spread: 1.6,
       glow: 8, glowColour: 'rgba(255,170,60,ALPHA)',
     });
     return false;
@@ -66,10 +84,12 @@ export class Fireball {
   update(dt, player, map) {
     this.t += dt;
     this.chipFlash = Math.max(0, this.chipFlash - dt);
-    this.life -= dt;
+    if (this.knockT <= 0) this.life -= dt;   // staggered time is not on the clock
     if (this.life <= 0) { this.pop(); return; }
 
-    if (this.t < this.homeFor) {
+    if (this.knockT > 0) {
+      this.knockT -= dt;          // staggered: drifting, not homing
+    } else if (this.t < this.homeFor) {
       const want = Math.atan2(player.y - this.y, player.x - this.x);
       let da = want - this.angle;
       while (da > Math.PI) da -= Math.PI * 2;
@@ -78,7 +98,7 @@ export class Fireball {
       this.angle += Math.max(-this.turn * dt, Math.min(this.turn * dt, da)) * k;
     }
 
-    this.speed += 34 * dt;
+    if (this.knockT <= 0) this.speed += 34 * dt;
     this.x += Math.cos(this.angle) * this.speed * dt;
     this.y += Math.sin(this.angle) * this.speed * dt;
 
@@ -101,7 +121,12 @@ export class Fireball {
 
     if (map.solidPx(this.x, this.y)) { this.pop(); return; }
 
-    if (Math.hypot(player.x - this.x, player.y - this.y) < this.radius + 5) {
+    // A staggered fireball cannot burn you. Without this it drifts into the
+    // player mid-rally and pops on contact, which silently ends the exchange
+    // before the follow-up swings can land — the exact reason bare hands could
+    // never finish one off.
+    if (this.knockT <= 0 &&
+        Math.hypot(player.x - this.x, player.y - this.y) < this.radius + 5) {
       player.hurt(this.damage, this.x, this.y);
       this.pop();
     }

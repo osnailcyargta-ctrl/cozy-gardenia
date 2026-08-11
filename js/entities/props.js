@@ -94,7 +94,7 @@ export class Prop {
       case 'anvil':   return S.anvil;
       case 'shelf':   return S.shelf;
       case 'coinPile': return S.coinPile;
-      case 'torch':   return Math.floor(this.t * 11) % 2 ? S.torch1 : S.torch0;
+      case 'torch':   return Math.floor(this.t * 6.5) % 2 ? S.torch1 : S.torch0;
     }
     return S.anvil;
   }
@@ -133,14 +133,16 @@ export class Prop {
   drawLight(ctx, room) {
     switch (this.type) {
       case 'torch': {
-        const flick = 0.82 + Math.sin(this.t * 13) * 0.1 + Math.random() * 0.09;
-        addLight(ctx, this.x, this.y - 4, 122 * flick, 'rgba(255,158,64,ALPHA)', 1.0 * flick);
+        // Two out-of-phase sines instead of Math.random(): a random term
+        // re-rolled every frame strobes at 60Hz rather than flickering.
+        const f = 0.90 + Math.sin(this.t * 6.7) * 0.055 + Math.sin(this.t * 15.3 + 1.7) * 0.03;
+        addLight(ctx, this.x, this.y - 5, 92 * f, 'rgba(255,152,58,ALPHA)', 0.85 * f);
         break;
       }
       case 'smelter': {
         if (room?.smelter?.burning) {
-          const flick = 0.85 + Math.random() * 0.15;
-          addLight(ctx, this.x, this.y, 104 * flick, 'rgba(255,130,40,ALPHA)', 1.0);
+          const flick = 0.92 + Math.sin(this.t * 5.1) * 0.05 + Math.sin(this.t * 12.9) * 0.03;
+          addLight(ctx, this.x, this.y, 88 * flick, 'rgba(255,130,40,ALPHA)', 0.9 * flick);
         } else {
           addLight(ctx, this.x, this.y, 46, 'rgba(220,110,50,ALPHA)', 0.42);
         }

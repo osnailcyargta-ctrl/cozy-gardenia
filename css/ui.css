@@ -84,6 +84,34 @@
 }
 #boss-bar.phase2 #boss-name { color: #c9a2ee; text-shadow: 0 0 14px rgba(190,130,240,0.6), 0 2px 4px #000; }
 
+/* ---------- interact prompt ---------- */
+#prompt {
+  position: absolute;
+  z-index: 25;
+  left: 50%; bottom: 19%;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 9px;
+  padding: 7px 15px;
+  background: rgba(10, 7, 16, 0.86);
+  border: 1px solid #56406a;
+  border-radius: 3px;
+  font-size: 13px;
+  color: #cbb9a0;
+  letter-spacing: 0.05em;
+  animation: prompt-in 0.18s ease;
+  pointer-events: none;
+}
+#prompt b {
+  display: grid; place-items: center;
+  width: 22px; height: 22px;
+  background: #2b2038;
+  border: 1px solid #6d5488;
+  border-radius: 3px;
+  color: #e8d9b8;
+  font-size: 12px;
+  box-shadow: 0 0 10px rgba(140,100,190,0.35);
+}
+
 /* ---------- hotbar ---------- */
 #hotbar-wrap {
   position: absolute;

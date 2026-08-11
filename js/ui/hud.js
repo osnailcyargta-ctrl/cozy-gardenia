@@ -21,6 +21,8 @@ function heartCanvas(kind) {
 const hud = document.getElementById('hud');
 const heartsEl = document.getElementById('hearts');
 const roomLabel = document.getElementById('room-label');
+const promptEl = document.getElementById('prompt');
+const promptText = promptEl.querySelector('span');
 const bossBar = document.getElementById('boss-bar');
 const bossFill = document.getElementById('boss-fill');
 const bossLag = document.getElementById('boss-lag');
@@ -68,6 +70,17 @@ export function setHearts(hp, maxHp) {
 
 
 export function setRoom(name) { roomLabel.textContent = name; }
+
+/**
+ * Floating "E — Smelter" hint next to whatever you are standing by. This is an
+ * affordance, not a tutorial: without it there is nothing on screen telling you
+ * a block can be used at all.
+ */
+export function setPrompt(text) {
+  if (!text) { promptEl.classList.add('hidden'); return; }
+  if (promptText.textContent !== text) promptText.textContent = text;
+  promptEl.classList.remove('hidden');
+}
 
 
 export function toast() { /* removed: the game no longer narrates itself */ }

@@ -85,6 +85,7 @@ function startGame() {
 }
 
 function goToLibrary() {
+  hud.setPrompt(null);
   game.scene = 'library';
   game.rooms = [];
   game.room = new Room(LIBRARY);
@@ -254,7 +255,7 @@ function resolveSwing() {
   // Fireballs can be batted out of the air. This is not damage — bare hands
   // deal zero — so it is resolved through the projectile's own integrity pool.
   for (const pr of room.projectiles()) {
-    if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + (pr.radius || 4), pr.x, pr.y)) {
+    if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + (pr.radius || 4) + 8, pr.x, pr.y)) {
       pr.strike(w, p.x, p.y);
       hitAnything = true;
     }
@@ -425,6 +426,12 @@ function update(dt) {
   const room = game.room;
   if (!p || !room) return;
 
+  // --- dash ---
+  if ((input.pressed('Space') || input.pressed('KeyF')) && !p.dead) {
+    const ax = input.axis();
+    p.startDash(ax.x, ax.y);
+  }
+
   // --- attack ---
   if (input.tookLeftClick() && !p.dead) {
     const angle = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
@@ -452,6 +459,9 @@ function update(dt) {
 
   // --- hud ---
   hud.setHearts(p.hp, p.maxHp);
+
+  const near = room.nearestInteractive(p);
+  hud.setPrompt(near && !p.dead ? near.label : null);
 
   const boss = room.boss;
   if (boss) {
