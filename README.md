@@ -8,8 +8,11 @@ boot.
 
 ## The game
 
-You wake in a library with a single shelf holding three books. Two are chained shut. The one you can
-open is **Greedy Ass Dragon**, and it runs three rooms deep:
+You wake in a library with a single shelf holding three books. Each is a world, and each ends when
+you carry the win back out through the door you came in by — killing the boss does not close the
+book, walking home does.
+
+### Book one — *Greedy Ass Dragon*
 
 1. **The Cold Forge** — no enemies, three stations. A chest holds 1 coal and 3 iron ore. The smelter
    burns three ores per coal, ten seconds each. The anvil turns three iron bars into an iron sword.
@@ -19,6 +22,22 @@ open is **Greedy Ass Dragon**, and it runs three rooms deep:
    harder, dashes twice, and drops the key to the next gate.
 3. **The Hoard** — the **Dragon King**, 300 HP across two phases. At half health his wings tear
    apart: no more dashing, but he starts vanishing and reappearing behind you.
+
+### Book two — *The Drowned Queen*
+
+Chained until the dragon falls, and written for the sword you made in book one.
+
+1. **The Shallows** — flooded stone, two drowned thralls, and a 90 HP coral gate. A silt-choked
+   chest by the entrance holds a spare blade, so the book is never a dead end.
+2. **The Coral Vault** — three sirens. They do not dash at you the way the dragon's servants do;
+   they **haul you in**, then spit water bolts. The tier II carries the coral key. A chest in the
+   **top-right corner** holds the **wave gun**.
+3. **The Tide Throne** — the **Drowned Queen**, 300 HP across two phases. Phase one is walls of
+   water sweeping the room with a single gap, homing bubbles, and whirlpools that drag you off your
+   footing. At 150 the room floods for good: you wade from then on, the tides come in pairs, and she
+   can sink into the water and surface underneath you.
+
+Book three is not written yet.
 
 ## Controls
 
@@ -49,12 +68,21 @@ does nothing, because bare hands deal zero damage.
 |---|---|
 | Player | 100 HP (10 hearts) |
 | Fists | **0 damage** — cannot hurt enemies, wood, or anything else |
-| Iron sword | 18 damage · 2 blocks reach |
+| Iron sword | 18 damage · 2 blocks reach · 0.36s cooldown |
+| Wave gun | 9 on the cast, then 8 every 0.2–0.7s for 1.5s · 4-block cone · 2s cooldown |
 | Wooden gate | 72 HP → 4 sword hits |
+| Coral gate | 90 HP → 5 sword hits |
 | Dragon's Servant I / II | 45 HP / 90 HP (tier II has 3 armour) |
-| Dragon King | 300 HP → 17 sword hits, phase 2 at 150 |
-| Fireball | destructible — **2 sword swings** or **5 bare-handed** |
+| Drowned Thrall | 30 HP |
+| Siren I / II | 55 HP / 100 HP (tier II has 3 armour) |
+| Dragon King · Drowned Queen | 300 HP each, phase 2 at 150 |
+| Fireballs and bubbles | destructible — **2 sword swings** or **5 bare-handed** |
 | Dash | ~60px burst, i-frames while dashing, 0.75s cooldown |
+
+The wave gun is the first weapon that is not a swing. It plants a cone where you fired it and leaves
+it there for a second and a half, slowing everything inside to 45% speed and chewing on it. The cone
+does not follow you — walk out of it and you have given it away. Its ticks deliberately apply **no
+knockback**: a field meant to hold enemies in the water must not punt them out of it.
 
 Fireballs can be batted out of the air. That is not damage, which is why bare
 hands can do it at all — it just takes five swings instead of two. A struck
@@ -98,10 +126,24 @@ js/
   engine/          canvas · postfx · sprite · input · camera · particles · audio
   data/            palette · sprites (all pixel art) · items · rooms
   world/           tilemap · collision · room
-  entities/        player · servant · dragonking · projectile · gate · props
+  entities/        player · servant · dragonking · drowned · drownedqueen
+                   projectile · wave · gate · props
   systems/         inventory · smelting
   ui/              hud · inventoryUI · craftUI · shelfUI · icons
 ```
 
 Sound is synthesised at runtime with WebAudio — oscillators and filtered noise bursts, no audio
 files.
+
+## Two notes on how it is built
+
+The Dragon King and the Drowned Queen are not typed out pixel by pixel. At 40–48 pixels wide, a
+hand-typed figure turns to mush; both are generated from shape primitives — ellipses, tapers,
+triangles, wavering strands — under a top-lit shader, and the resulting rows are pasted into the
+sprite table. Everything 16×16 is hand-drawn, because at that size primitives are worse than a
+careful hand.
+
+Room layout is guarded by a flood fill rather than by eye. For every room it asserts that the
+forward exit is **unreachable** while its gate is shut, reachable once it opens, and that the way
+back out is always reachable — with props included in the fill. Both progression-blocking bugs this
+project has had were solid props sitting where nothing was checking for them.

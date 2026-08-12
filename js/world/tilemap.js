@@ -73,7 +73,37 @@ export class TileMap {
   drawFloor(x, tx, ty) {
     const px = tx * TILE, py = ty * TILE;
     const wood = this.floorStyle === 'wood';
+    const water = this.floorStyle === 'water';
     const n = hash(tx, ty, 1);
+
+    if (water) {
+      // Flooded flagstones. The stone stays readable underneath — a flat sheet
+      // of blue leaves the room with no architecture at all. The caustics are
+      // deliberately NOT tile-aligned: a highlight that repeats on every tile
+      // boundary turns the floor back into visible graph paper.
+      const shades = ['#0c2b37', '#0b2833', '#0e2f3c', '#0a2530'];
+      x.fillStyle = shades[((tx * 7 + ty * 13) >>> 0) % 4];
+      x.fillRect(px, py, TILE, TILE);
+
+      x.fillStyle = 'rgba(0,0,0,0.34)';
+      x.fillRect(px, py + TILE - 1, TILE, 1);
+      x.fillRect(px + TILE - 1, py, 1, TILE);
+
+      for (let i = 0; i < 3; i++) {
+        const h = hash(tx * 3 + i, ty * 5 + i, 11);
+        if (h < 0.42) continue;
+        const cy = (h * TILE) | 0;
+        // a band drawn from a continuous wave, so it crosses tile seams
+        const phase = Math.sin((px + cy * 2) * 0.09 + ty) * 5;
+        x.fillStyle = `rgba(112,218,212,${0.05 + h * 0.06})`;
+        x.fillRect(px + (((phase + 16) | 0) % TILE) - 3, py + cy, 5 + ((h * 6) | 0), 1);
+      }
+      if (n < 0.14) {
+        x.fillStyle = 'rgba(44,86,56,0.3)';   // weed in the joints
+        x.fillRect(px + 2, py + TILE - 4, 4, 3);
+      }
+      return;
+    }
 
     if (wood) {
       // planks running horizontally, 4px tall, with staggered joints
@@ -127,6 +157,7 @@ export class TileMap {
     const px = tx * TILE, py = ty * TILE;
     const openBelow = !this.solidAt(tx, ty + 1);
     const n = hash(tx, ty, 2);
+    const wet = this.floorStyle === 'water';
 
     // Base block, deliberately far darker than the floor. Without a clear
     // value gap between wall and floor the room has no readable architecture —
@@ -141,10 +172,11 @@ export class TileMap {
     x.fillRect(px + ((off + 7) % TILE), py, 1, TILE);
 
     // faint mortar catching light on the upper edge of each brick
-    x.fillStyle = 'rgba(110,92,132,0.14)';
+    const mortar = wet ? '110,180,190' : '110,92,132';
+    x.fillStyle = `rgba(${mortar},0.14)`;
     x.fillRect(px, py, TILE, 1);
     if (n > 0.7) {
-      x.fillStyle = 'rgba(110,92,132,0.09)';
+      x.fillStyle = `rgba(${mortar},0.09)`;
       x.fillRect(px + 2, py + 3, 5, 1);
     }
     if (n < 0.2) {
@@ -162,13 +194,18 @@ export class TileMap {
     // sells the wall as a vertical surface rather than a dark floor tile. The
     // per-tile jitter keeps it from looking like a ruled line.
     if (openBelow) {
-      x.fillStyle = '#3b3050';
+      x.fillStyle = wet ? '#1c4351' : '#3b3050';
       x.fillRect(px, py + TILE - 3, TILE, 3);
-      x.fillStyle = '#5b4a76';
+      x.fillStyle = wet ? '#2d6879' : '#5b4a76';
       x.fillRect(px, py + TILE - 3, TILE, 1);
       if (n > 0.45) {
-        x.fillStyle = 'rgba(140,118,175,0.5)';
+        x.fillStyle = wet ? 'rgba(112,218,212,0.42)' : 'rgba(140,118,175,0.5)';
         x.fillRect(px + ((n * 8) | 0), py + TILE - 3, 4, 1);
+      }
+      // waterline scum just under the lip
+      if (wet && n > 0.3) {
+        x.fillStyle = 'rgba(44,86,56,0.35)';
+        x.fillRect(px + ((n * 9) | 0), py + TILE - 1, 5, 1);
       }
     }
   }

@@ -5,6 +5,8 @@ import { TileMap } from './tilemap.js';
 import { Prop } from '../entities/props.js';
 import { Servant } from '../entities/servant.js';
 import { DragonKing } from '../entities/dragonking.js';
+import { Thrall, Siren } from '../entities/drowned.js';
+import { DrownedQueen } from '../entities/drownedqueen.js';
 import { Gate } from '../entities/gate.js';
 import { decode, draw } from '../engine/sprite.js';
 import { ITEMS } from '../data/sprites.js';
@@ -70,23 +72,31 @@ export class Room {
     this.map.bake();
     this.mood = def.mood || {};
 
-    this.props = (def.props || []).map((p) => new Prop(p.type, p.x, p.y));
+    this.props = (def.props || []).map((p) => new Prop(p.type, p.x, p.y, p));
     this.gate = def.gate ? new Gate(def.gate) : null;
     this.drops = [];
+    this.waves = [];
     this.cleared = false;
     this.enteredT = 0;
 
     this.enemies = (def.enemies || []).map((e) => {
-      if (e.type === 'servant') return new Servant(e.x, e.y, e.tier);
-      if (e.type === 'king') return new DragonKing(e.x, e.y);
-      return null;
+      switch (e.type) {
+        case 'servant': return new Servant(e.x, e.y, e.tier);
+        case 'king':    return new DragonKing(e.x, e.y);
+        case 'thrall':  return new Thrall(e.x, e.y);
+        case 'siren':   return new Siren(e.x, e.y, e.tier);
+        case 'queen':   return new DrownedQueen(e.x, e.y);
+        default:        return null;
+      }
     }).filter(Boolean);
 
     this.smelter = null;   // set by the game when this room has one
   }
 
   get hasSmelter() { return this.props.some((p) => p.type === 'smelter'); }
-  get boss() { return this.enemies.find((e) => e instanceof DragonKing) || null; }
+
+  /** Bosses declare themselves, so a new book doesn't need a new branch here. */
+  get boss() { return this.enemies.find((e) => e.isBoss) || null; }
 
   /** Everything movement should collide with. */
   solids() {
@@ -98,6 +108,21 @@ export class Room {
 
   addDrop(id, x, y, count = 1) {
     this.drops.push(new Drop(id, x, y, count));
+  }
+
+  /** Plant a wave-gun cone. Lives in the room, not on the player. */
+  addWave(wave) { this.waves.push(wave); }
+
+  /**
+   * Copy over the parts of a previous instance of this same room that a death
+   * should not undo: chests you already emptied stay empty, so respawning in
+   * front of the wave-gun chest can't mint a second wave gun.
+   */
+  inheritContainers(old) {
+    if (!old) return;
+    const mine = this.props.filter((p) => p.container);
+    const theirs = old.props.filter((p) => p.container);
+    mine.forEach((p, i) => { if (theirs[i]) p.container.load(theirs[i].container.serialize()); });
   }
 
   /**
@@ -133,12 +158,13 @@ export class Room {
         e.lootDropped = true;
         if (e instanceof Servant) {
           if (e.dropsKey) this.addDrop('key', e.x, e.y);
-          const n = 1 + ((Math.random() * 2) | 0);
-          for (let i = 0; i < n; i++) {
-            this.addDrop('gold_coin', e.x + (Math.random() - 0.5) * 10, e.y + (Math.random() - 0.5) * 10);
-          }
+          this.scatterCoins(e, 'gold_coin');
         }
-        if (e instanceof DragonKing) game?.onBossDefeated?.();
+        if (e instanceof Siren) {
+          if (e.dropsKey) this.addDrop('coral_key', e.x, e.y);
+          this.scatterCoins(e, 'gold_coin');
+        }
+        if (e.isBoss) game?.onBossDefeated?.();
       }
     }
 
@@ -163,8 +189,18 @@ export class Room {
     }
     this.drops = this.drops.filter((d) => !d.dead);
 
+    for (const w of this.waves) w.update(dt, this.enemies);
+    this.waves = this.waves.filter((w) => !w.dead);
+
     if (!this.cleared && this.enemies.length && this.enemies.every((e) => e.dead)) {
       this.cleared = true;
+    }
+  }
+
+  scatterCoins(e, id) {
+    const n = 1 + ((Math.random() * 2) | 0);
+    for (let i = 0; i < n; i++) {
+      this.addDrop(id, e.x + (Math.random() - 0.5) * 10, e.y + (Math.random() - 0.5) * 10);
     }
   }
 
@@ -199,23 +235,27 @@ export class Room {
     for (const e of list) {
       if (!e) continue;
       if (e instanceof Prop) e.draw(ctx, this);
-      else if (e instanceof DragonKing) e.draw(ctx, this.map);
+      else if (e.isBoss) e.draw(ctx, this.map);
       else e.draw(ctx);
     }
 
     // dead bosses still own live projectiles
     for (const e of this.enemies) {
-      if (e instanceof DragonKing && e.dead) e.draw(ctx, this.map);
+      if (e.isBoss && e.dead) e.draw(ctx, this.map);
     }
+
+    // waves sit on top of everything they are drowning
+    for (const w of this.waves) w.draw(ctx);
   }
 
   drawLights(ctx) {
     for (const p of this.props) p.drawLight(ctx, this);
     for (const d of this.drops) d.drawLight(ctx);
     for (const e of this.enemies) {
-      if (e instanceof DragonKing) e.drawLight(ctx, this.map);
+      if (e.isBoss) e.drawLight(ctx, this.map);
       else if (!e.dead || e.deathT < 0.4) e.drawLight(ctx);
     }
+    for (const w of this.waves) w.drawLight(ctx);
     if (this.gate) this.gate.drawLight(ctx);
     this._player?.drawLight?.(ctx);
   }

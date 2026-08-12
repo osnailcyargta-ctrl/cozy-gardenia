@@ -13,8 +13,7 @@ import { FIST, ITEM_DEFS } from './data/items.js';
 import { Room } from './world/room.js';
 import { inArc } from './world/collision.js';
 import { Player } from './entities/player.js';
-import { Servant } from './entities/servant.js';
-import { DragonKing } from './entities/dragonking.js';
+import { WaveField } from './entities/wave.js';
 
 import { Container } from './systems/inventory.js';
 import { Smelter } from './systems/smelting.js';
@@ -36,9 +35,10 @@ const game = {
   roomIndex: 0,
   player: null,
   inventory: new Container(16, 'Satchel'),
-  chest: new Container(9, 'Chest'),
   smelter: new Smelter(),
+  bookIndex: 0,
   bookDefeated: false,
+  cleared: loadCleared(),
   paused: false,
   time: 0,
 
@@ -47,9 +47,25 @@ const game = {
   syncWeapon,
   enterBook,
   onBossDefeated,
+  // console escape hatch: open every book without finishing the one before it
+  unlockAll: () => { BOOKS.forEach((b, i) => b.rooms && game.cleared.add(i)); shelfUI.refresh(); },
 };
 
 window.game = game;   // handy for debugging from the console
+
+/**
+ * Which books you have finished, remembered across reloads. Without this every
+ * refresh would put book two back behind the dragon, and there is no save file
+ * to carry your sword through — so you would be locked out by your own progress.
+ */
+function loadCleared() {
+  try { return new Set(JSON.parse(localStorage.getItem('itb.cleared') || '[]')); }
+  catch { return new Set(); }
+}
+
+function saveCleared() {
+  try { localStorage.setItem('itb.cleared', JSON.stringify([...game.cleared])); } catch { /* private mode */ }
+}
 
 /* ============================================================
    Boot
@@ -84,8 +100,18 @@ function startGame() {
   }, 600);
 }
 
+// What the victory screen says, per book. Written at the moment you walk back
+// into the library, because that is when the book actually closes.
+const ENDINGS = {
+  0: ['The dragon falls', 'The hoard is quiet at last. On the shelf, a chain slips loose.'],
+  1: ['The tide goes out', 'The throne room drains. What is left of the queen is only water.'],
+};
+
 function goToLibrary() {
   hud.setPrompt(null);
+  const finished = game.bookDefeated;
+  const endedBook = game.bookIndex;
+  if (game.player) game.player.speedMul = 1;
   game.scene = 'library';
   game.rooms = [];
   game.room = new Room(LIBRARY);
@@ -100,6 +126,15 @@ function goToLibrary() {
   P.clear();
   cam.reset();
   flashFromBlack();
+
+  if (finished) {
+    game.bookDefeated = false;
+    const [title, text] = ENDINGS[endedBook] || ENDINGS[0];
+    document.getElementById('victory-title').textContent = title;
+    document.getElementById('victory-text').textContent = text;
+    shelfUI.refresh();
+    setTimeout(() => victoryScreen.classList.remove('hidden'), 700);
+  }
 }
 
 /* ============================================================
@@ -108,16 +143,13 @@ function goToLibrary() {
 
 function enterBook(index) {
   const book = BOOKS[index];
-  if (!book || book.locked || !book.rooms) return;
+  if (!book || !book.rooms || locked(index)) return;
 
-  // fresh run: rebuild rooms, reset the chest and the forge
+  // fresh run: rebuild rooms and the forge. Chests carry their own contents.
   game.rooms = book.rooms.map((def) => new Room(def));
   game.roomIndex = 0;
+  game.bookIndex = index;
   game.bookDefeated = false;
-
-  game.chest.clear();
-  game.chest.slots[0] = { id: 'coal', count: 1 };
-  game.chest.slots[4] = { id: 'iron_ore', count: 3 };
   game.smelter.reset();
 
   game.scene = 'book';
@@ -143,7 +175,7 @@ function loadRoom(index, dir) {
   hud.setHearts(game.player.hp, game.player.maxHp);
 
   const boss = room.boss;
-  if (boss && !boss.dead) hud.showBoss('Dragon King');
+  if (boss && !boss.dead) hud.showBoss(boss.name);
   else hud.hideBoss();
 
   P.clear();
@@ -186,10 +218,26 @@ function tryRoomTransition() {
   }
 }
 
+const pageEl = document.getElementById('book-transition');
+
+/**
+ * Turn a page over the screen and swap rooms while it covers the view. Moving
+ * between rooms is moving through a book, so a page turn says that where a
+ * black fade said nothing.
+ */
 function fadeThen(fn) {
-  fade.classList.remove('hidden', 'from-black');
-  fade.classList.add('to-black');
-  setTimeout(() => { fn(); }, 440);
+  const flip = pageEl.querySelector('.page-flip');
+  pageEl.classList.remove('hidden');
+  flip.classList.add('quick');
+  flip.style.animation = 'none';
+  void flip.offsetWidth;          // restart the animation
+  flip.style.animation = '';
+
+  setTimeout(fn, 260);            // swap while the page covers the screen
+  setTimeout(() => {
+    pageEl.classList.add('hidden');
+    flip.classList.remove('quick');
+  }, 560);
 }
 
 /* ============================================================
@@ -222,7 +270,7 @@ function doInteract() {
       return true;
     case 'chest':
       prop.opened = true;
-      invUI.open(game.chest, 'Chest');
+      invUI.open(prop.container, prop.title);
       sfx.uiBig();
       return true;
     case 'smelter':
@@ -243,9 +291,30 @@ function resolveSwing() {
   const w = p.weapon;
   let hitAnything = false;
 
+  // The wave gun does not swing at anything: it plants a cone that then does
+  // the work on its own clock. Only the opening hit is resolved here.
+  if (w.kind === 'wave') {
+    room.addWave(new WaveField(p.x, p.y, p.attackAngle, w));
+    for (const e of room.enemies) {
+      if (e.dead || e.invisible) continue;
+      if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + (e.radius || 8), e.x, e.y)) {
+        e.hurt(w.damage, p.x, p.y);
+        hitAnything = true;
+      }
+    }
+    for (const pr of room.projectiles()) {
+      if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range, pr.x, pr.y)) {
+        pr.strike(w, p.x, p.y);
+        hitAnything = true;
+      }
+    }
+    // water does nothing to a barred door — the gate still wants a blade
+    return hitAnything;
+  }
+
   for (const e of room.enemies) {
     if (e.dead) continue;
-    if (e instanceof DragonKing && e.invisible) continue;
+    if (e.invisible) continue;
     if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + (e.radius || 8), e.x, e.y)) {
       e.hurt(w.damage, p.x, p.y);
       hitAnything = true;
@@ -278,11 +347,18 @@ function tryUnlockGate() {
   if (!gate || gate.open || gate.kind !== 'locked') return;
   const d = Math.hypot(game.player.x - gate.x, game.player.y - gate.y);
   if (d > 30) return;
-  if (game.inventory.has('key', 1)) {
-    game.inventory.remove('key', 1);
+  if (game.inventory.has(gate.keyId, 1)) {
+    game.inventory.remove(gate.keyId, 1);
     gate.unlock();
     refreshInventory();
   }
+}
+
+/** A book is sealed until the one it depends on has been finished. */
+function locked(index) {
+  const b = BOOKS[index];
+  if (!b || !b.rooms) return true;
+  return b.needs !== undefined && !game.cleared.has(b.needs);
 }
 
 /* ============================================================
@@ -311,13 +387,17 @@ function refreshInventory() {
    Death / victory
    ============================================================ */
 
+/**
+ * Killing the boss only marks the book done. The victory screen waits until you
+ * have actually walked back out to the library, so finishing is something you
+ * travel to rather than something that interrupts you mid-room.
+ */
 function onBossDefeated() {
   game.bookDefeated = true;
+  game.cleared.add(game.bookIndex);
+  saveCleared();
   hud.hideBoss();
   sfx.victory();
-  setTimeout(() => {
-    if (game.scene === 'book') victoryScreen.classList.remove('hidden');
-  }, 2200);
 }
 
 function respawn() {
@@ -335,6 +415,7 @@ function respawn() {
   if (room) {
     const fresh = new Room(room.def);
     fresh.smelter = game.smelter;
+    fresh.inheritContainers(room);
     game.rooms[game.roomIndex] = fresh;
     loadRoom(game.roomIndex, 'forward');
   } else {

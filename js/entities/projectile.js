@@ -1,5 +1,5 @@
-// Boss weaponry: homing fireballs that curve toward the player, and the mouth
-// laser with its telegraph.
+// Boss weaponry: homing fireballs that curve toward the player, the mouth
+// laser with its telegraph, and book two's water equivalents.
 
 import { addLight } from '../engine/postfx.js';
 import * as P from '../engine/particles.js';
@@ -11,10 +11,30 @@ import { rayHitsWall } from '../world/collision.js';
    Fireball — steers toward the player instead of flying straight.
    ============================================================ */
 
+/**
+ * Colours, trail and sounds — everything that separates a fireball from a
+ * drowned bubble. The physics and the "you can bat it out of the air" contract
+ * are identical, so only the look is parameterised.
+ */
+const FIRE_LOOK = {
+  core: '#8f2f16', mid: '#e87a2c', hot: '#ffeaa8',
+  trail: ['#ffb648', '#e87a2c'], smoke: '#5c1a10',
+  glow: 'rgba(255,150,50,ALPHA)', spark: '#ffb648',
+  pop: 'fire', chip: 'hitWood',
+};
+
+const WATER_LOOK = {
+  core: '#0e3d4f', mid: '#38aab6', hot: '#c4f6ef',
+  trail: ['#70dad4', '#1f7d91'], smoke: '#082733',
+  glow: 'rgba(90,210,210,ALPHA)', spark: '#70dad4',
+  pop: 'splash', chip: 'splash',
+};
+
 export class Fireball {
   constructor(x, y, angle, opts = {}) {
     this.x = x; this.y = y;
     this.angle = angle;
+    this.look = opts.look || FIRE_LOOK;
     this.speed = opts.speed ?? 96;
     this.turn = opts.turn ?? 2.3;      // radians/sec of steering authority
     this.damage = opts.damage ?? 3;
@@ -47,8 +67,8 @@ export class Fireball {
       sfx.hit();
       cam.shake(3, 0.16);
       P.burst(this.x, this.y, 20, {
-        colour: '#ffeaa8', speed: 120, life: 0.45, size: 2, drag: 0.88,
-        glow: 14, glowColour: 'rgba(255,200,110,ALPHA)',
+        colour: this.look.hot, speed: 120, life: 0.45, size: 2, drag: 0.88,
+        glow: 14, glowColour: this.look.glow,
       });
       this.pop();
       return true;
@@ -71,12 +91,12 @@ export class Fireball {
     this.knockT = 0.5;           // longer than either weapon's cooldown
     this.t = 0;                  // restart the homing ramp from scratch
 
-    sfx.hitWood();
+    sfx[this.look.chip]();
     cam.shake(2, 0.1);
     P.burst(this.x, this.y, 10, {
-      colour: '#ffb648', speed: 90, life: 0.32, size: 2, drag: 0.9,
+      colour: this.look.spark, speed: 90, life: 0.32, size: 2, drag: 0.9,
       angle: away, spread: 1.6,
-      glow: 8, glowColour: 'rgba(255,170,60,ALPHA)',
+      glow: 8, glowColour: this.look.glow,
     });
     return false;
   }
@@ -112,10 +132,10 @@ export class Fireball {
         vy: -Math.sin(this.angle) * 22 + (Math.random() - 0.5) * 18,
         life: 0.3 + Math.random() * 0.25,
         size: 2,
-        colour: Math.random() > 0.5 ? '#ffb648' : '#e87a2c',
+        colour: this.look.trail[Math.random() > 0.5 ? 0 : 1],
         drag: 0.9,
         glow: 10,
-        glowColour: 'rgba(255,150,50,ALPHA)',
+        glowColour: this.look.glow,
       });
     }
 
@@ -135,12 +155,12 @@ export class Fireball {
   pop() {
     if (this.dead) return;
     this.dead = true;
-    sfx.fire();
+    sfx[this.look.pop]();
     P.burst(this.x, this.y, 16, {
-      colour: '#ffb648', speed: 90, life: 0.4, size: 2, drag: 0.88,
-      glow: 14, glowColour: 'rgba(255,160,60,ALPHA)',
+      colour: this.look.spark, speed: 90, life: 0.4, size: 2, drag: 0.88,
+      glow: 14, glowColour: this.look.glow,
     });
-    P.burst(this.x, this.y, 6, { colour: '#5c1a10', speed: 40, life: 0.7, size: 3, drag: 0.9 });
+    P.burst(this.x, this.y, 6, { colour: this.look.smoke, speed: 40, life: 0.7, size: 3, drag: 0.9 });
   }
 
   draw(ctx) {
@@ -155,18 +175,18 @@ export class Fireball {
     ctx.globalCompositeOperation = 'lighter';
     const x = this.x + jitter, y = this.y + jitter;
     // layered core: dark red -> orange -> white centre
-    ctx.fillStyle = '#8f2f16';
+    ctx.fillStyle = this.look.core;
     ctx.beginPath(); ctx.arc(x, y, 5 * f, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#e87a2c';
+    ctx.fillStyle = this.look.mid;
     ctx.beginPath(); ctx.arc(x, y, 3.4 * f, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = this.chipFlash > 0 ? '#ffffff' : '#ffeaa8';
+    ctx.fillStyle = this.chipFlash > 0 ? '#ffffff' : this.look.hot;
     ctx.beginPath(); ctx.arc(x, y, 1.7 * f, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
   }
 
   drawLight(ctx) {
     const wear = this.integrity / this.maxIntegrity;
-    addLight(ctx, this.x, this.y, 48 * (0.6 + wear * 0.4), 'rgba(255,150,50,ALPHA)', 0.9 * (0.55 + wear * 0.45));
+    addLight(ctx, this.x, this.y, 48 * (0.6 + wear * 0.4), this.look.glow, 0.9 * (0.55 + wear * 0.45));
   }
 }
 
@@ -336,5 +356,17 @@ export class Laser {
       addLight(ctx, o.x + Math.cos(this.angle) * d, o.y + Math.sin(this.angle) * d,
         44, 'rgba(255,160,60,ALPHA)', 0.55 * k);
     }
+  }
+}
+
+/* ============================================================
+   Bubble — book two's fireball. Slower and it curves harder, so it
+   is easier to outrun but much harder to simply ignore.
+   ============================================================ */
+
+export class Bubble extends Fireball {
+  constructor(x, y, angle, opts = {}) {
+    super(x, y, angle, { ...opts, look: WATER_LOOK });
+    this.radius = 5;
   }
 }

@@ -1,6 +1,7 @@
-// Room gates. Two kinds:
-//   'wood'   — 12 HP, immune to fists, so it gates progress behind the sword
-//   'locked' — no amount of hitting helps; it wants the key the tier II servant drops
+// Room gates. Three kinds:
+//   'wood'   — immune to fists, so it gates progress behind a real weapon
+//   'coral'  — book two's equivalent: same rules, more health, different art
+//   'locked' — no amount of hitting helps; it wants the key its book's elite drops
 
 import { decode, draw, silhouette } from '../engine/sprite.js';
 import { BLOCKS } from '../data/sprites.js';
@@ -11,15 +12,27 @@ import { sfx } from '../engine/audio.js';
 import * as cam from '../engine/camera.js';
 
 const S = {
-  gate: decode(BLOCKS.gate[0], 'gate'),
-  hurt: decode(BLOCKS.gateHurt[0], 'gateHurt'),
-  locked: decode(BLOCKS.gateLocked[0], 'gateLocked'),
+  wood:        { whole: decode(BLOCKS.gate[0], 'gate'),
+                 hurt:  decode(BLOCKS.gateHurt[0], 'gateHurt') },
+  coral:       { whole: decode(BLOCKS.coralGate[0], 'coralGate'),
+                 hurt:  decode(BLOCKS.coralGateHurt[0], 'coralGateHurt') },
+  locked:      decode(BLOCKS.gateLocked[0], 'gateLocked'),
+  coralLocked: decode(BLOCKS.coralGateLocked[0], 'coralGateLocked'),
+};
+
+// splinters for wood, shards for coral
+const DEBRIS = {
+  wood:  ['#3a2a1c', '#573f28', '#7a5a38', '#a07a4c'],
+  coral: ['#3d1430', '#7a1f45', '#b83a5a', '#e8688a'],
 };
 
 export class Gate {
-  constructor({ tx, ty, kind, hp = 12 }) {
+  constructor({ tx, ty, kind, hp = 12, keyId = 'key', theme = 'wood' }) {
     this.tx = tx; this.ty = ty;
     this.kind = kind;
+    this.keyId = keyId;
+    // a locked gate still needs to look like it belongs to its book
+    this.theme = kind === 'locked' ? theme : kind;
     this.maxHp = hp;
     this.hp = hp;
     this.open = false;
@@ -50,11 +63,13 @@ export class Gate {
       return 'blocked';
     }
 
-    // bare hands cannot hurt wood (and deal 0 anyway)
+    const debris = DEBRIS[this.theme] || DEBRIS.wood;
+
+    // bare hands cannot hurt it (and deal 0 anyway)
     if (weapon?.isFist || damage <= 0) {
       this.shake = 0.18;
       sfx.hitWood();
-      P.burst(this.x, this.y, 3, { colour: '#7a5a38', speed: 25, life: 0.25, size: 1 });
+      P.burst(this.x, this.y, 3, { colour: debris[2], speed: 25, life: 0.25, size: 1 });
       return 'blocked';
     }
 
@@ -65,7 +80,7 @@ export class Gate {
     cam.shake(3, 0.18);
 
     P.burst(this.x, this.y, 9, {
-      colour: '#7a5a38', speed: 80, life: 0.5, size: 2, grav: 240, drag: 0.9,
+      colour: debris[2], speed: 80, life: 0.5, size: 2, grav: 240, drag: 0.9,
       angle: Math.atan2(this.y - fromY, this.x - fromX), spread: 2.2,
     });
 
@@ -101,7 +116,7 @@ export class Gate {
         vy: (Math.random() - 0.9) * 140,
         life: 0.7 + Math.random() * 0.6,
         size: 1 + Math.random() * 3,
-        colour: ['#3a2a1c', '#573f28', '#7a5a38', '#a07a4c'][(Math.random() * 4) | 0],
+        colour: (DEBRIS[this.theme] || DEBRIS.wood)[(Math.random() * 4) | 0],
         grav: 320, drag: 0.94,
       });
     }
@@ -117,8 +132,12 @@ export class Gate {
     if (this.open && this.openT > 0.35) return;
 
     const sx = this.shake > 0 ? Math.sin(this.shake * 90) * this.shake * 12 : 0;
-    const damaged = this.kind === 'wood' && this.hp <= this.maxHp * 0.5;
-    const spr = this.kind === 'locked' ? S.locked : (damaged ? S.hurt : S.gate);
+    const breakable = this.kind !== 'locked';
+    const damaged = breakable && this.hp <= this.maxHp * 0.5;
+    const set = S[this.theme] || S.wood;
+    const spr = this.kind === 'locked'
+      ? (this.theme === 'coral' ? S.coralLocked : S.locked)
+      : (damaged ? set.hurt : set.whole);
 
     const alpha = this.open ? 1 - this.openT / 0.35 : 1;
 
@@ -132,22 +151,23 @@ export class Gate {
     }
 
     // health pips while it is being chewed through
-    if (this.kind === 'wood' && this.hp < this.maxHp && !this.open) {
+    if (breakable && this.hp < this.maxHp && !this.open) {
       const w = 22;
       const x = Math.round(this.x - w / 2);
       const y = Math.round(this.ty * TILE - 7);
       ctx.fillStyle = 'rgba(0,0,0,0.75)';
       ctx.fillRect(x - 1, y - 1, w + 2, 4);
-      ctx.fillStyle = '#3a2a1c';
+      ctx.fillStyle = (DEBRIS[this.theme] || DEBRIS.wood)[0];
       ctx.fillRect(x, y, w, 2);
-      ctx.fillStyle = '#a07a4c';
+      ctx.fillStyle = (DEBRIS[this.theme] || DEBRIS.wood)[3];
       ctx.fillRect(x, y, Math.max(0, Math.round(w * (this.hp / this.maxHp))), 2);
     }
   }
 
   drawLight(ctx) {
     if (this.kind === 'locked' && !this.open) {
-      addLight(ctx, this.x, this.y - 8, 22, 'rgba(240,204,90,ALPHA)', 0.34);
+      addLight(ctx, this.x, this.y - 8, 22,
+        this.theme === 'coral' ? 'rgba(232,104,138,ALPHA)' : 'rgba(240,204,90,ALPHA)', 0.34);
     }
     if (this.open && this.openT < 0.5) {
       addLight(ctx, this.x, this.y, 70, 'rgba(255,200,120,ALPHA)', 1 - this.openT / 0.5);

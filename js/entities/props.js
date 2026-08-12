@@ -5,6 +5,7 @@ import { decode, draw } from '../engine/sprite.js';
 import { BLOCKS } from '../data/sprites.js';
 import { addLight } from '../engine/postfx.js';
 import * as P from '../engine/particles.js';
+import { Container } from '../systems/inventory.js';
 
 const S = {
   smelter: decode(BLOCKS.smelter[0], 'smelter'),
@@ -16,10 +17,14 @@ const S = {
   torch0: decode(BLOCKS.torch[0], 'torch0'),
   torch1: decode(BLOCKS.torch[1], 'torch1'),
   coinPile: decode(BLOCKS.coinPile[0], 'coinPile'),
+  coral: decode(BLOCKS.coral[0], 'coral'),
+  kelp0: decode(BLOCKS.kelp[0], 'kelp0'),
+  kelp1: decode(BLOCKS.kelp[1], 'kelp1'),
+  pearlPile: decode(BLOCKS.pearlPile[0], 'pearlPile'),
 };
 
 export class Prop {
-  constructor(type, x, y) {
+  constructor(type, x, y, def = {}) {
     this.type = type;
     this.x = x; this.y = y;
     this.t = Math.random() * 10;
@@ -27,12 +32,17 @@ export class Prop {
     this.opened = false;
 
     const box = {
-      smelter:  [8, 8,  true,  'Smelter'],
-      chest:    [8, 6,  true,  'Chest'],
-      anvil:    [8, 6,  true,  'Anvil'],
-      shelf:    [30, 22, true, 'Shelf'],
-      torch:    [0, 0,  false, null],
-      coinPile: [8, 4,  true,  null],
+      smelter:   [8, 8,  true,  'Smelter'],
+      chest:     [8, 6,  true,  'Chest'],
+      anvil:     [8, 6,  true,  'Anvil'],
+      shelf:     [30, 22, true, 'Shelf'],
+      torch:     [0, 0,  false, null],
+      coinPile:  [8, 4,  true,  null],
+      pearlPile: [8, 4,  true,  null],
+      coral:     [7, 6,  true,  null],
+      // kelp is scenery you walk straight through — a reef that blocks
+      // movement turns the room into a maze nobody asked for
+      kelp:      [0, 0,  false, null],
     }[type] || [8, 8, true, null];
 
     this.hw = box[0];
@@ -44,6 +54,17 @@ export class Prop {
     // The shelf is the library's one hero object; at 1x it reads as a trinket
     // lost in the room rather than the thing the whole hub is built around.
     this.scale = type === 'shelf' ? 2 : 1;
+
+    // Every chest owns its contents. One shared container across the whole game
+    // meant book two's wave-gun chest and book one's ore chest were the same
+    // box wearing two hats.
+    if (type === 'chest') {
+      this.title = def.title || 'Chest';
+      this.container = new Container(9, this.title);
+      for (const [slot, entry] of Object.entries(def.contents || {})) {
+        this.container.slots[Number(slot)] = { id: entry.id, count: entry.count ?? 1 };
+      }
+    }
 
     // Interaction reach, measured to the prop's box. Generous on purpose: with
     // no on-screen prompt telling you when you are in range, a tight radius
@@ -72,6 +93,21 @@ export class Prop {
       }
     }
 
+    if ((this.type === 'coral' || this.type === 'kelp') && Math.random() > 0.965) {
+      P.spawn({
+        x: this.x + (Math.random() - 0.5) * 10,
+        y: this.y + 2,
+        vx: (Math.random() - 0.5) * 5,
+        vy: -14 - Math.random() * 10,
+        life: 1 + Math.random() * 0.8,
+        size: 1,
+        colour: '#70dad4',
+        drag: 0.99,
+        glow: 5,
+        glowColour: 'rgba(110,220,215,ALPHA)',
+      });
+    }
+
     if (this.type === 'smelter' && room?.smelter?.burning) {
       if (Math.random() > 0.7) {
         P.spawn({
@@ -94,6 +130,9 @@ export class Prop {
       case 'anvil':   return S.anvil;
       case 'shelf':   return S.shelf;
       case 'coinPile': return S.coinPile;
+      case 'pearlPile': return S.pearlPile;
+      case 'coral':   return S.coral;
+      case 'kelp':    return Math.floor(this.t * 1.6) % 2 ? S.kelp1 : S.kelp0;
       case 'torch':   return Math.floor(this.t * 6.5) % 2 ? S.torch1 : S.torch0;
     }
     return S.anvil;
@@ -102,7 +141,7 @@ export class Prop {
   draw(ctx, room) {
     const spr = this.sprite(room);
 
-    if (this.type !== 'torch') {
+    if (this.type !== 'torch' && this.type !== 'kelp') {
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.beginPath();
       ctx.ellipse(Math.round(this.x), Math.round(this.y + this.hh - 1),
@@ -150,6 +189,19 @@ export class Prop {
       }
       case 'coinPile':
         addLight(ctx, this.x, this.y, 40, 'rgba(240,204,90,ALPHA)', 0.42);
+        break;
+      case 'pearlPile':
+        addLight(ctx, this.x, this.y, 44, 'rgba(150,240,235,ALPHA)', 0.45);
+        break;
+      case 'coral': {
+        // slow breathing glow rather than a flicker — coral is not on fire
+        const b = 0.62 + Math.sin(this.t * 1.3) * 0.07;
+        addLight(ctx, this.x, this.y - 2, 96 * b, 'rgba(236,120,150,ALPHA)', b);
+        addLight(ctx, this.x, this.y - 2, 34, 'rgba(255,190,205,ALPHA)', 0.5);
+        break;
+      }
+      case 'kelp':
+        addLight(ctx, this.x, this.y, 34, 'rgba(92,143,90,ALPHA)', 0.24);
         break;
       case 'shelf':
         addLight(ctx, this.x, this.y, 76, 'rgba(165,135,215,ALPHA)', 0.42);

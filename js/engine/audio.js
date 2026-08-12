@@ -80,5 +80,12 @@ export const sfx = {
   appear:   () => { tone({ freq: 1400, to: 300, dur: 0.26, type: 'sine', gain: 0.13 }); noise({ dur: 0.22, gain: 0.12, filter: 2400, type: 'highpass' }); },
   death:    () => { tone({ freq: 220, to: 40, dur: 1.3, type: 'sawtooth', gain: 0.22 }); noise({ dur: 1.1, gain: 0.14, filter: 500, sweepTo: 120 }); },
   bookOpen: () => { noise({ dur: 0.42, gain: 0.16, filter: 1400, sweepTo: 400, q: 0.8 }); tone({ freq: 420, to: 620, dur: 0.4, type: 'sine', gain: 0.09 }); },
+  // ---- book two: everything wet is filtered noise rather than a tone,
+  // which is what keeps it from sounding like the dragon's fire ----
+  splash:   () => { noise({ dur: 0.26, gain: 0.2, filter: 2600, sweepTo: 500, q: 0.9, type: 'bandpass' }); tone({ freq: 420, to: 150, dur: 0.2, type: 'sine', gain: 0.09 }); },
+  wave:     () => { noise({ dur: 0.55, gain: 0.24, filter: 300, sweepTo: 2200, q: 1.2, type: 'bandpass' }); tone({ freq: 140, to: 320, dur: 0.5, type: 'sine', gain: 0.11 }); },
+  tide:     () => { noise({ dur: 1.1, gain: 0.26, filter: 180, sweepTo: 1400, q: 0.8 }); tone({ freq: 60, to: 130, dur: 1, type: 'sawtooth', gain: 0.14 }); },
+  undertow: () => { tone({ freq: 300, to: 70, dur: 0.7, type: 'sine', gain: 0.16 }); noise({ dur: 0.7, gain: 0.14, filter: 1600, sweepTo: 220, q: 1.4, type: 'bandpass' }); },
+
   victory:  () => [0, 0.13, 0.26, 0.46].forEach((d, i) => tone({ freq: [392, 494, 587, 784][i], dur: 0.42, type: 'triangle', gain: 0.15, delay: d })),
 };

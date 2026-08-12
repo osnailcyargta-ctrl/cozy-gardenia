@@ -2,6 +2,7 @@
 // the sealed pair only rattle their chains.
 
 import { sfx } from '../engine/audio.js';
+import { BOOKS } from '../data/rooms.js';
 
 const popup = document.getElementById('shelf-popup');
 const transition = document.getElementById('book-transition');
@@ -15,6 +16,34 @@ export function init(g) {
     el.addEventListener('mouseenter', () => {
       if (!busy) sfx.ui();
     });
+  });
+  refresh();
+}
+
+/**
+ * Paint the shelf from BOOKS. A book that exists always shows its real title
+ * even while chained — knowing what is behind the lock is the point of a
+ * locked book. A book with no rooms behind it stays anonymous.
+ */
+export function refresh() {
+  popup.querySelectorAll('.book').forEach((el) => {
+    const b = BOOKS[Number(el.dataset.book)];
+    const written = !!b?.rooms;
+    const sealed = !written || (b.needs !== undefined && !game?.cleared?.has(b.needs));
+
+    el.classList.toggle('locked', sealed);
+    el.querySelector('.book-title').textContent = written ? b.title : '???';
+    el.querySelector('.book-label').textContent = sealed ? 'Sealed' : b.title;
+
+    let chain = el.querySelector('.chain');
+    if (sealed && !chain) {
+      chain = document.createElement('div');
+      chain.className = 'chain';
+      chain.innerHTML = '<div class="lock"></div>';
+      el.appendChild(chain);
+    } else if (!sealed && chain) {
+      chain.remove();
+    }
   });
 }
 
@@ -54,6 +83,7 @@ function onPick(el) {
 }
 
 export function open() {
+  refresh();
   popup.classList.remove('hidden');
   sfx.uiBig();
 }

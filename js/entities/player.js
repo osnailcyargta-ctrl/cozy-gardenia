@@ -50,6 +50,10 @@ export class Player {
     this.bobT = 0;
     this.stepT = 0;
 
+    // Scaled by the world, not by the player: book two's boss floods the room
+    // and everyone in it wades from then on.
+    this.speedMul = 1;
+
     this.dashT = 0;
     this.dashCd = 0;
     this.dashX = 1; this.dashY = 0;
@@ -186,7 +190,8 @@ export class Player {
     this.ghosts = this.ghosts.filter((g) => g.life > 0);
 
     const ax = axis();
-    const target = { x: ax.x * SPEED, y: ax.y * SPEED };
+    const sp = SPEED * (this.speedMul ?? 1);
+    const target = { x: ax.x * sp, y: ax.y * sp };
 
     // attacking roots you slightly — commitment makes combat readable
     const control = this.attacking ? 0.35 : 1;

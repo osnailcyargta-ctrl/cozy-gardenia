@@ -29,6 +29,8 @@ export class DragonKing {
   constructor(x, y) {
     this.x = x; this.y = y;
     this.homeX = x; this.homeY = y;
+    this.isBoss = true;
+    this.name = 'Dragon King';
     // Drawn at 2x: a 40x32 sprite reads as a trinket next to a 16px player,
     // not as the thing the whole book builds toward. Hitbox follows the art.
     this.scale = 2;
@@ -59,6 +61,8 @@ export class DragonKing {
 
     this.projectiles = [];
     this.phaseFlash = 0;
+    this.slowMul = 1;
+    this.slowUntil = 0;
     this.introDone = false;
   }
 
@@ -68,7 +72,7 @@ export class DragonKing {
 
   get script() { return this.phase === 1 ? SCRIPT_1 : SCRIPT_2; }
 
-  hurt(amount, fromX, fromY) {
+  hurt(amount, fromX, fromY, knockScale = 1) {
     if (this.dead || this.invisible || amount <= 0) return 0;
     this.hp -= amount;
     this.hurtFlash = 0.18;
@@ -81,8 +85,8 @@ export class DragonKing {
 
     // light knockback only — a boss shouldn't be shoved around
     const a = Math.atan2(this.y - fromY, this.x - fromX);
-    this.knockX += Math.cos(a) * 26;
-    this.knockY += Math.sin(a) * 26;
+    this.knockX += Math.cos(a) * 26 * knockScale;
+    this.knockY += Math.sin(a) * 26 * knockScale;
 
     if (this.phase === 1 && this.hp <= MAX_HP / 2) this.enterPhase2();
     if (this.hp <= 0) this.die();
@@ -181,6 +185,10 @@ export class DragonKing {
     this.anim += dt * 3.4;
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.phaseFlash = Math.max(0, this.phaseFlash - dt * 0.8);
+    if (this.slowUntil > 0) {
+      this.slowUntil -= dt;
+      if (this.slowUntil <= 0) this.slowMul = 1;
+    }
 
     const dx = player.x - this.x;
     const dy = player.y - this.y;
@@ -333,7 +341,8 @@ export class DragonKing {
     this.knockX *= kd; this.knockY *= kd;
 
     if (!this.invisible) {
-      moveAgainst(map, solids, this, (mx + this.knockX) * dt, (my + this.knockY) * dt);
+      moveAgainst(map, solids, this,
+        (mx * this.slowMul + this.knockX) * dt, (my * this.slowMul + this.knockY) * dt);
     }
   }
 

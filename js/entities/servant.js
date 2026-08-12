@@ -52,11 +52,20 @@ export class Servant {
     this.hitThisAttack = false;
     this.hoverT = Math.random() * 6;
     this.dropsKey = tier === 2;
+
+    // written by WaveField, expired here
+    this.slowMul = 1;
+    this.slowUntil = 0;
   }
 
   get alive() { return !this.dead; }
 
-  hurt(amount, fromX, fromY) {
+  /**
+   * `knockScale` is how hard this hit shoves. The wave gun passes 0: a field
+   * that is supposed to hold you in the water must not punt you out of it with
+   * every tick.
+   */
+  hurt(amount, fromX, fromY, knockScale = 1) {
     if (this.dead) return;
     // A fist (0) must stay 0 — the floor only applies to real weapons.
     const dealt = amount <= 0 ? 0 : Math.max(1, amount - this.cfg.armour);
@@ -66,7 +75,7 @@ export class Servant {
     sfx.hit();
 
     const a = Math.atan2(this.y - fromY, this.x - fromX);
-    const kb = this.tier === 2 ? 90 : 150;
+    const kb = (this.tier === 2 ? 90 : 150) * knockScale;
     this.knockX = Math.cos(a) * kb;
     this.knockY = Math.sin(a) * kb;
 
@@ -98,6 +107,10 @@ export class Servant {
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
     this.hoverT += dt;
     this.t += dt;
+    if (this.slowUntil > 0) {
+      this.slowUntil -= dt;
+      if (this.slowUntil <= 0) this.slowMul = 1;
+    }
 
     const dx = player.x - this.x;
     const dy = player.y - this.y;
@@ -105,7 +118,7 @@ export class Servant {
     const ang = Math.atan2(dy, dx);
     if (this.state !== DASH) this.flip = dx < 0;
 
-    const S = this.cfg.speed;
+    const S = this.cfg.speed * this.slowMul;
     let mx = 0, my = 0;
 
     switch (this.state) {
@@ -178,7 +191,7 @@ export class Servant {
       }
 
       case DASH: {
-        const speed = 330;
+        const speed = 330 * this.slowMul;
         mx = Math.cos(this.dashAngle) * speed;
         my = Math.sin(this.dashAngle) * speed;
 

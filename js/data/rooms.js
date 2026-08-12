@@ -98,14 +98,17 @@ export const BOOK1_ROOMS = [
   {
     id: 'b1r1',
     name: 'The Cold Forge',
-    tiles: shell({ right: true }),
+    tiles: shell({ right: true, left: true }),
     spawn: { x: 120, y: 200 },
     spawnBack: { x: 420, y: 128 },
     mood: { fog: 0.4, vignette: 1.05, ambient: '#343048' },
     floor: 'stone',
     props: [
       { type: 'smelter', x: 72,  y: 128 },
-      { type: 'chest',   x: 240, y: 128 },
+      // Slot 1 holds the coal, slot 5 the ore — exactly enough for one sword
+      // and not a scrap more.
+      { type: 'chest',   x: 240, y: 128,
+        contents: { 0: { id: 'coal', count: 1 }, 4: { id: 'iron_ore', count: 3 } } },
       { type: 'anvil',   x: 72,  y: 56  },
       { type: 'torch',   x: 24,  y: 40  },
       { type: 'torch',   x: 168, y: 40  },
@@ -126,7 +129,7 @@ export const BOOK1_ROOMS = [
   {
     id: 'b1r2',
     name: 'Hall of Coin',
-    tiles: shell({ right: true }),
+    tiles: shell({ right: true, left: true }),
     spawn: { x: 60, y: 128 },
     spawnBack: { x: 420, y: 128 },
     mood: { fog: 0.3, vignette: 1, ambient: '#38304a' },
@@ -152,7 +155,7 @@ export const BOOK1_ROOMS = [
       { type: 'servant', tier: 2, x: 380, y: 128 },
     ],
     exitTo: 2,
-    backTo: null,
+    backTo: 0,
   },
 
   // ---------- Room 3: the Dragon King ----------
@@ -167,8 +170,8 @@ export const BOOK1_ROOMS = [
       '#............................#',
       '#............................#',
       '#............................#',
-      'B............................#',
-      'B............................#',
+      'BB...........................#',
+      'BB...........................#',
       '#............................#',
       '#............................#',
       '#............................#',
@@ -196,12 +199,142 @@ export const BOOK1_ROOMS = [
     gate: null,
     enemies: [{ type: 'king', x: 330, y: 118 }],
     exitTo: null,
-    backTo: null,
+    backTo: 1,
   },
 ];
 
+/* ============================================================
+   Book 2 — "The Drowned Queen"
+   ============================================================ */
+
+export const BOOK2_ROOMS = [
+  // ---------- Room 1: the shallows ----------
+  {
+    id: 'b2r1',
+    name: 'The Shallows',
+    tiles: shell({ right: true, left: true }),
+    spawn: { x: 72, y: 128 },
+    spawnBack: { x: 420, y: 128 },
+    mood: { fog: 0.5, vignette: 1.1, ambient: '#16323f' },
+    floor: 'water',
+    props: [
+      // A spare blade, because this book must not be a dead end for anyone who
+      // arrives without one — the coral gate takes 90 HP of real damage and
+      // fists deal zero.
+      { type: 'chest', x: 72, y: 200, title: 'Silt-Choked Chest',
+        contents: { 0: { id: 'iron_sword' } } },
+      { type: 'coral', x: 40,  y: 56  },
+      { type: 'coral', x: 200, y: 48  },
+      { type: 'coral', x: 360, y: 56  },
+      { type: 'coral', x: 40,  y: 208 },
+      { type: 'coral', x: 216, y: 216 },
+      { type: 'coral', x: 400, y: 208 },
+      { type: 'coral', x: 424, y: 200 },
+      { type: 'kelp', x: 128, y: 72  },
+      { type: 'kelp', x: 152, y: 184 },
+      { type: 'kelp', x: 288, y: 80  },
+      { type: 'kelp', x: 312, y: 176 },
+      { type: 'kelp', x: 392, y: 88  },
+    ],
+    gate: { tx: 28, ty: 7, kind: 'coral', hp: 90 },
+    enemies: [
+      { type: 'thrall', x: 280, y: 88  },
+      { type: 'thrall', x: 300, y: 176 },
+    ],
+    exitTo: 1,
+    backTo: 'library',
+  },
+
+  // ---------- Room 2: the vault ----------
+  {
+    id: 'b2r2',
+    name: 'The Coral Vault',
+    tiles: shell({ right: true, left: true }),
+    spawn: { x: 60, y: 128 },
+    spawnBack: { x: 420, y: 128 },
+    mood: { fog: 0.42, vignette: 1.08, ambient: '#142e3b' },
+    floor: 'water',
+    props: [
+      // The wave gun, in the top-right corner and nowhere near the door lane.
+      { type: 'chest', x: 424, y: 56, title: 'Vault Chest',
+        contents: { 0: { id: 'wave_gun' } } },
+      { type: 'pearlPile', x: 64,  y: 72  },
+      { type: 'pearlPile', x: 64,  y: 184 },
+      { type: 'pearlPile', x: 392, y: 200 },
+      { type: 'pearlPile', x: 232, y: 216 },
+      { type: 'coral', x: 40,  y: 48  },
+      { type: 'coral', x: 168, y: 48  },
+      { type: 'coral', x: 296, y: 48  },
+      { type: 'coral', x: 40,  y: 216 },
+      { type: 'coral', x: 168, y: 216 },
+      { type: 'coral', x: 320, y: 216 },
+      { type: 'coral', x: 440, y: 208 },
+      { type: 'kelp', x: 120, y: 128 },
+      { type: 'kelp', x: 344, y: 120 },
+    ],
+    gate: { tx: 28, ty: 7, kind: 'locked', theme: 'coral', keyId: 'coral_key' },
+    enemies: [
+      { type: 'siren', tier: 1, x: 300, y: 80  },
+      { type: 'siren', tier: 1, x: 300, y: 176 },
+      { type: 'siren', tier: 2, x: 376, y: 128 },
+    ],
+    exitTo: 2,
+    backTo: 0,
+  },
+
+  // ---------- Room 3: the throne ----------
+  {
+    id: 'b2r3',
+    name: 'The Tide Throne',
+    tiles: SHELL([
+      '##############################',
+      '##############################',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      'BB...........................#',
+      'BB...........................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '##############################',
+      '##############################',
+    ]),
+    spawn: { x: 64, y: 128 },
+    spawnBack: { x: 64, y: 128 },
+    mood: { fog: 0.36, vignette: 1.2, ambient: '#122834' },
+    floor: 'water',
+    props: [
+      // The floor is kept clear: her tides sweep the whole room, so anything
+      // solid out there would be cover she never agreed to.
+      { type: 'coral', x: 40,  y: 40  },
+      { type: 'coral', x: 40,  y: 216 },
+      { type: 'coral', x: 440, y: 40  },
+      { type: 'coral', x: 440, y: 216 },
+      { type: 'pearlPile', x: 424, y: 216 },
+      { type: 'kelp', x: 24,  y: 88  },
+      { type: 'kelp', x: 24,  y: 168 },
+      { type: 'kelp', x: 456, y: 88  },
+      { type: 'kelp', x: 456, y: 168 },
+    ],
+    gate: null,
+    enemies: [{ type: 'queen', x: 340, y: 120 }],
+    exitTo: null,
+    backTo: 1,
+  },
+];
+
+/**
+ * The shelf. `needs` is the book you must finish before the chains come off —
+ * book two expects you to arrive carrying the sword book one taught you to
+ * make. Book three has no rooms yet, so it stays sealed no matter what.
+ */
 export const BOOKS = [
-  { id: 0, title: 'Greedy Ass Dragon', locked: false, rooms: BOOK1_ROOMS },
-  { id: 1, title: '???', locked: true, rooms: null },
-  { id: 2, title: '???', locked: true, rooms: null },
+  { id: 0, title: 'Greedy Ass Dragon', rooms: BOOK1_ROOMS },
+  { id: 1, title: 'The Drowned Queen', rooms: BOOK2_ROOMS, needs: 0 },
+  { id: 2, title: '???', rooms: null },
 ];

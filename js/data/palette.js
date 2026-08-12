@@ -72,4 +72,28 @@ export const PAL = {
   'H': '#3d5a44',  // moss
   'I': '#d8cba8',  // parchment
   'J': '#6b5f4a',  // parchment shadow
+
+  // --- water (book two) ---
+  // Cold and desaturated on purpose: the drowned book has to feel like a
+  // different world from the dragon's forge without leaving the same palette.
+  'K': '#04141d',  // abyss
+  'L': '#082733',  // deep water
+  'M': '#0e3d4f',  // water dark
+  'N': '#15586d',  // water mid
+  'O': '#1f7d91',  // water light
+  'P': '#38aab6',  // shallow
+  'Q': '#70dad4',  // foam
+  'R': '#c4f6ef',  // foam bright
+
+  // --- coral ---
+  'S': '#3d1430',  // coral shadow
+  'T': '#7a1f45',  // coral deep
+  'U': '#b83a5a',  // coral mid
+  'V': '#e8688a',  // coral bright
+  'W': '#ffb3c4',  // coral pale
+
+  // --- kelp / drowned flesh ---
+  'X': '#12261c',  // kelp dark
+  'Y': '#2c5638',  // kelp
+  'Z': '#5c8f5a',  // kelp light
 };
