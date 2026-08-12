@@ -54,6 +54,10 @@ export class Player {
     // and everyone in it wades from then on.
     this.speedMul = 1;
 
+    // Set while a boss is waking up or dying. The player still breathes and
+    // blinks — they just don't get to act during someone else's moment.
+    this.frozen = false;
+
     this.dashT = 0;
     this.dashCd = 0;
     this.dashX = 1; this.dashY = 0;
@@ -64,7 +68,7 @@ export class Player {
 
   /** Returns true if the dash actually started. */
   startDash(dx, dy) {
-    if (this.dashCd > 0 || this.dashing || this.dead) return false;
+    if (this.dashCd > 0 || this.dashing || this.dead || this.frozen) return false;
     // no direction held: dash the way you are facing
     if (!dx && !dy) {
       if (this.facing === 'side') { dx = this.flip ? -1 : 1; dy = 0; }
@@ -122,7 +126,7 @@ export class Player {
   heal(n) { this.hp = Math.min(this.maxHp, this.hp + n); }
 
   startAttack(angle) {
-    if (this.cooldown > 0 || this.dead) return false;
+    if (this.cooldown > 0 || this.dead || this.frozen) return false;
     this.attackAngle = angle;
     this.attackT = 0.2;
     this.cooldown = this.weapon.cooldown;
@@ -164,6 +168,20 @@ export class Player {
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.attackT = Math.max(0, this.attackT - dt);
     this.dashCd = Math.max(0, this.dashCd - dt);
+
+    if (this.frozen) {
+      // coast to a stop rather than stopping dead, then just idle
+      const f = Math.pow(0.0001, dt);
+      this.vx *= f; this.vy *= f;
+      moveAgainst(map, solids, this, this.vx * dt, this.vy * dt);
+      this.moving = false;
+      this.anim += dt * 2.6;
+      this.bobT += dt;
+      this.knockX = this.knockY = 0;
+      for (const g of this.ghosts) g.life -= dt;
+      this.ghosts = this.ghosts.filter((g) => g.life > 0);
+      return;
+    }
 
     // ---- dash overrides normal movement entirely ----
     if (this.dashT > 0) {

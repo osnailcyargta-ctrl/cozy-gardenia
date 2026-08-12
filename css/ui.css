@@ -267,3 +267,34 @@
 }
 #fade.to-black { animation: fade-in 0.42s ease forwards; }
 #fade.from-black { animation: fade-out 0.55s ease forwards; }
+
+/* ============================================================
+   Now-playing card
+   ============================================================ */
+/* Bottom-right, clear of the hotbar (bottom: 22px, 52px tall) and of the
+   boss bar (bottom: 104px), so a track change never lands on top of either. */
+#music-toast {
+  position: absolute;
+  z-index: 24;
+  right: 20px; bottom: 92px;
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 8px 14px;
+  background: linear-gradient(90deg, rgba(14,10,22,0), rgba(16,11,26,0.86) 22%);
+  border-right: 2px solid #d8a05a;
+  border-radius: 2px;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  color: #e8d9b8;
+  text-shadow: 0 2px 6px #000;
+  pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+}
+#music-toast.run { animation: track-card 2s cubic-bezier(.22,.61,.36,1) forwards; }
+#music-toast .mt-name {
+  font-weight: 700;
+  color: #f0cc5a;
+  text-shadow: 0 0 12px rgba(240,204,90,0.45), 0 2px 6px #000;
+}
+#music-toast .mt-arrow { color: #6f5c8c; letter-spacing: 0; }
+#music-toast .mt-by { color: #a294bb; font-style: italic; }

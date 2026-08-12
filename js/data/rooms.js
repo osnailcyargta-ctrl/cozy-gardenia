@@ -204,7 +204,7 @@ export const BOOK1_ROOMS = [
 ];
 
 /* ============================================================
-   Book 2 — "The Drowned Queen"
+   Book 2 — "Underwater Mommy"
    ============================================================ */
 
 export const BOOK2_ROOMS = [
@@ -218,12 +218,11 @@ export const BOOK2_ROOMS = [
     mood: { fog: 0.5, vignette: 1.1, ambient: '#16323f' },
     floor: 'water',
     props: [
-      // A spare blade, because this book must not be a dead end for anyone who
-      // arrives without one — the coral gate takes 90 HP of real damage and
-      // fists deal zero.
-      { type: 'chest', x: 72, y: 200, title: 'Silt-Choked Chest',
-        contents: { 0: { id: 'iron_sword' } } },
+      // No chest here. This book only opens once book one is finished, and book
+      // one cannot be finished without forging the sword — which the save keeps
+      // for you across reloads.
       { type: 'coral', x: 40,  y: 56  },
+      { type: 'coral', x: 72,  y: 200 },
       { type: 'coral', x: 200, y: 48  },
       { type: 'coral', x: 360, y: 56  },
       { type: 'coral', x: 40,  y: 208 },
@@ -258,10 +257,11 @@ export const BOOK2_ROOMS = [
       // The wave gun, in the top-right corner and nowhere near the door lane.
       { type: 'chest', x: 424, y: 56, title: 'Vault Chest',
         contents: { 0: { id: 'wave_gun' } } },
-      { type: 'pearlPile', x: 64,  y: 72  },
-      { type: 'pearlPile', x: 64,  y: 184 },
-      { type: 'pearlPile', x: 392, y: 200 },
-      { type: 'pearlPile', x: 232, y: 216 },
+      // Nothing is hoarded here — the vault is a reef, not a treasury.
+      { type: 'coral', x: 64,  y: 72  },
+      { type: 'coral', x: 64,  y: 184 },
+      { type: 'kelp',  x: 392, y: 200 },
+      { type: 'kelp',  x: 232, y: 216 },
       { type: 'coral', x: 40,  y: 48  },
       { type: 'coral', x: 168, y: 48  },
       { type: 'coral', x: 296, y: 48  },
@@ -315,7 +315,7 @@ export const BOOK2_ROOMS = [
       { type: 'coral', x: 40,  y: 216 },
       { type: 'coral', x: 440, y: 40  },
       { type: 'coral', x: 440, y: 216 },
-      { type: 'pearlPile', x: 424, y: 216 },
+      { type: 'coral', x: 400, y: 216 },
       { type: 'kelp', x: 24,  y: 88  },
       { type: 'kelp', x: 24,  y: 168 },
       { type: 'kelp', x: 456, y: 88  },
@@ -335,6 +335,6 @@ export const BOOK2_ROOMS = [
  */
 export const BOOKS = [
   { id: 0, title: 'Greedy Ass Dragon', rooms: BOOK1_ROOMS },
-  { id: 1, title: 'The Drowned Queen', rooms: BOOK2_ROOMS, needs: 0 },
+  { id: 1, title: 'Underwater Mommy', rooms: BOOK2_ROOMS, needs: 0 },
   { id: 2, title: '???', rooms: null },
 ];

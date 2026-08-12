@@ -1,9 +1,11 @@
-// The Drowned Queen — 300 HP, two phases.
+// The Drowned Queen — 300 HP, two phases, bracketed by two cutscenes.
 //
 // Phase 1 (300 -> 150): tide · volley · maelstrom · volley · tide · volley
-// Phase 2 (150 -> 0)  : the room floods. The player wades from here on, the
-//                       queen can sink into the water and surface underneath
-//                       you, and the tides come in pairs.
+// Phase 2 (150 -> 0)  : the room floods. The player wades from here on and the
+//                       tides come in pairs.
+//
+// You do not find her in the room — you find her crown floating on the water.
+// She rises out of it, and when she falls the crown is what is left behind.
 //
 // She is deliberately the inverse of the Dragon King. He closes distance and
 // makes you dodge sideways; she takes the floor away and makes you find the one
@@ -23,7 +25,12 @@ const Q = decodeSet(QUEEN, 'queen');
 
 const MAX_HP = 300;
 const SCRIPT_1 = ['tide', 'volley', 'maelstrom', 'volley', 'tide', 'volley'];
-const SCRIPT_2 = ['volley', 'tide', 'submerge', 'maelstrom', 'tide', 'random'];
+const SCRIPT_2 = ['volley', 'tide', 'maelstrom', 'tide', 'random'];
+
+// The rise, in seconds: an empty room, water gathering, the column climbing,
+// and the crown coming down onto her head.
+const RISE = { hidden: 0.9, stir: 0.9, climb: 1.1, crowned: 0.6 };
+const SINK = 2.5;
 
 /* ============================================================
    A wall of water crossing the room, with exactly one gap in it.
@@ -227,8 +234,12 @@ export class DrownedQueen {
     this.slowMul = 1; this.slowUntil = 0;
 
     this.step = 0;
-    this.state = 'intro';
+    this.state = 'hidden';
     this.t = 0;
+    this.locksPlayer = true;
+    this.awake = false;
+    this.defeatDone = false;
+    this.crownDrift = 0;
     this.volleyLeft = 0;
     this.volleyTimer = 0;
     this.invisible = false;
@@ -247,7 +258,9 @@ export class DrownedQueen {
   get script() { return this.phase === 1 ? SCRIPT_1 : SCRIPT_2; }
 
   hurt(amount, fromX, fromY, knockScale = 1) {
-    if (this.dead || this.invisible || amount <= 0) return 0;
+    // Nothing lands before the fight starts. The player is frozen through the
+    // wake-up anyway; this makes it true for everything else too.
+    if (this.dead || !this.awake || this.invisible || amount <= 0) return 0;
     this.hp -= amount;
     this.hurtFlash = 0.18;
     sfx.hit();
@@ -297,9 +310,15 @@ export class DrownedQueen {
     this.deathT = 0;
     this.hp = 0;
     this.flooded = false;
+    this.state = 'sinking';
+    this.locksPlayer = true;
+    this.invisible = false;
+    this.alpha = 1;
+    this.crownDrift = 0;
     for (const p of this.projectiles) p.dead = true;
     sfx.death();
     cam.shake(14, 1.6);
+    cam.zoomTo(this.x, this.y, 1.9, 0.9);
     P.burst(this.x, this.y, 60, {
       colour: '#c4f6ef', speed: 170, life: 1.4, size: 3, grav: 50, drag: 0.94,
       glow: 20, glowColour: 'rgba(150,240,235,ALPHA)',
@@ -328,11 +347,6 @@ export class DrownedQueen {
       case 'maelstrom':
         this.state = 'maelstrom';
         break;
-      case 'submerge':
-        this.state = 'submerge';
-        this.invisible = false;
-        sfx.vanish();
-        break;
       default:
         this.state = 'idle';
     }
@@ -358,7 +372,85 @@ export class DrownedQueen {
     // mid-animation — but not her death, or the win lap is a slog.
     player.speedMul = this.flooded && !this.dead ? 0.68 : 1;
 
-    if (this.dead) { this.deathT += dt; return; }
+    if (this.dead) {
+      this.deathT += dt;
+      this.crownDrift += dt;
+      // the column draining away
+      if (this.deathT < SINK && Math.random() > 0.4) {
+        P.spawn({
+          x: this.x + (Math.random() - 0.5) * 60, y: this.y + 10 + Math.random() * 24,
+          vx: (Math.random() - 0.5) * 60, vy: 30 + Math.random() * 60,
+          life: 0.7, size: 2, colour: Math.random() > 0.5 ? '#38aab6' : '#0e3d4f',
+          drag: 0.94, glow: 8, glowColour: 'rgba(90,210,210,ALPHA)',
+        });
+      }
+      if (this.deathT >= SINK && this.locksPlayer) {
+        this.locksPlayer = false;
+        this.defeatDone = true;
+        cam.zoomOut(0.7);
+      }
+      return;
+    }
+
+    // ---- she is not in the room yet, only her crown ----
+    if (!this.awake) {
+      this.t += dt;
+      this.hoverT += dt;
+      this.crownDrift += dt;
+
+      if (this.state === 'hidden') {
+        if (!this.introDone) {
+          this.introDone = true;
+          this.invisible = true;
+          this.alpha = 0;
+          cam.zoomTo(this.x, this.y + 18, 2.2, 0.85);
+        }
+        if (this.t > RISE.hidden) { this.state = 'stir'; this.t = 0; sfx.undertow(); }
+      } else if (this.state === 'stir') {
+        // water winding inward to the point she will come out of
+        if (Math.random() > 0.35) {
+          const a = Math.random() * Math.PI * 2;
+          const r = 30 + Math.random() * 26;
+          P.spawn({
+            x: this.x + Math.cos(a) * r, y: this.y + 20 + Math.sin(a) * r * 0.5,
+            vx: -Math.cos(a) * 70, vy: -Math.sin(a) * 40,
+            life: 0.45, size: 2, colour: '#70dad4', drag: 0.94,
+            glow: 8, glowColour: 'rgba(110,220,215,ALPHA)',
+          });
+        }
+        if (this.t > RISE.stir) { this.state = 'climb'; this.t = 0; sfx.tide(); cam.shake(5, 0.6); }
+      } else if (this.state === 'climb') {
+        this.invisible = false;
+        this.alpha = Math.min(1, this.t / (RISE.climb * 0.8));
+        if (Math.random() > 0.4) {
+          P.spawn({
+            x: this.x + (Math.random() - 0.5) * 50, y: this.y + 30,
+            vx: (Math.random() - 0.5) * 30, vy: -70 - Math.random() * 60,
+            life: 0.6, size: 2, colour: '#c4f6ef', drag: 0.93,
+            glow: 10, glowColour: 'rgba(160,245,240,ALPHA)',
+          });
+        }
+        if (this.t > RISE.climb) {
+          this.state = 'crowned';
+          this.t = 0;
+          this.alpha = 1;
+          cam.zoomOut(RISE.crowned);
+        }
+      } else if (this.state === 'crowned') {
+        if (this.t > RISE.crowned) {
+          cam.shake(7, 0.7);
+          P.burst(this.x, this.y - 20, 30, {
+            colour: '#e8688a', speed: 120, life: 0.7, size: 2,
+            glow: 14, glowColour: 'rgba(232,104,138,ALPHA)',
+          });
+          this.awake = true;
+          this.locksPlayer = false;
+          this.step = -1;
+          this.advance();
+        }
+      }
+      return;
+    }
 
     this.t += dt;
     this.hoverT += dt;
@@ -379,11 +471,6 @@ export class DrownedQueen {
     const drift = 30 * this.slowMul;
 
     switch (this.state) {
-      case 'intro':
-        if (!this.introDone) { this.introDone = true; sfx.tide(); cam.shake(7, 1); }
-        if (this.t > 1.4) { this.step = -1; this.advance(); }
-        break;
-
       case 'phaseshift':
         if (this.t > 1.5) { this.step = -1; this.advance(); }
         break;
@@ -429,44 +516,6 @@ export class DrownedQueen {
         if (this.t > 3.2) { this.spun = false; this.advance(); }
         break;
 
-      case 'submerge': {
-        if (this.t < 0.35) {
-          this.alpha = 1 - this.t / 0.35;
-        } else if (this.t < 1.7) {
-          this.invisible = true;
-          this.alpha = 0;
-          if (Math.random() > 0.6) {
-            P.spawn({
-              x: player.x + (Math.random() - 0.5) * 50,
-              y: player.y + (Math.random() - 0.5) * 40,
-              vx: 0, vy: -22, life: 0.6, size: 2, colour: '#70dad4',
-              glow: 8, glowColour: 'rgba(110,220,215,ALPHA)',
-            });
-          }
-        } else if (this.t < 1.9) {
-          if (this.invisible) {
-            this.invisible = false;
-            let nx = player.x, ny = player.y + 20;
-            nx = Math.max(TILE * 3, Math.min(VW - TILE * 3, nx));
-            ny = Math.max(TILE * 3.5, Math.min(VH - TILE * 3.5, ny));
-            this.x = nx; this.y = ny;
-            sfx.appear();
-            cam.shake(6, 0.34);
-            P.burst(this.x, this.y, 30, {
-              colour: '#c4f6ef', speed: 140, life: 0.6, size: 2,
-              glow: 16, glowColour: 'rgba(160,245,240,ALPHA)',
-            });
-            if (Math.hypot(player.x - this.x, player.y - this.y) < 34) {
-              player.hurt(18, this.x, this.y);
-            }
-          }
-          this.alpha = (this.t - 1.7) / 0.2;
-        } else {
-          this.alpha = 1;
-          this.advance();
-        }
-        break;
-      }
     }
 
     const kd = Math.pow(0.004, dt);
@@ -478,22 +527,62 @@ export class DrownedQueen {
 
   sprite() {
     const f = Math.floor(this.anim) % 2;
+    if (this.state === 'climb' || this.state === 'crowned') return Q.cast[0];
+    if (this.state === 'sinking') return Q.idle[0];
     if (this.phase === 2) return Q.broken[f];
     if (this.state === 'maelstrom') return Q.pull[0];
     if (this.state === 'volley' || this.state === 'tide') return Q.cast[0];
     return Q.idle[f];
   }
 
+  /**
+   * The crown on the water: what stands in for her before she rises, and what
+   * is left once she is gone. Drawn at the same 2x as she is, bobbing.
+   */
+  drawCrown(ctx, y, alpha = 1) {
+    const bob = Math.sin(this.crownDrift * 2.2) * 1.6;
+    const sway = Math.sin(this.crownDrift * 0.9) * 3;
+    draw(ctx, Q.crown[0], this.x + sway, y + bob, { alpha, scale: this.scale });
+  }
+
   draw(ctx, map) {
     for (const pr of this.projectiles) pr.draw(ctx, map);
 
-    if (this.dead) {
-      const k = Math.min(1, this.deathT / 1.2);
-      if (k >= 1) return;
-      draw(ctx, silhouette(this.sprite(), k > 0.5 ? '#0e3d4f' : '#c4f6ef'),
-        this.x, this.y + k * 10, { alpha: 1 - k, scale: this.scale });
+    // ---- before she arrives ----
+    if (!this.awake && !this.dead) {
+      const rising = this.state === 'climb' || this.state === 'crowned';
+      if (rising) {
+        // she climbs out of the water; the crown rides down to meet her head
+        const k = this.state === 'crowned' ? 1 : Math.min(1, this.t / RISE.climb);
+        const lift = (1 - k) * 46;
+        draw(ctx, this.sprite(), this.x, this.y + lift, { alpha: this.alpha, scale: this.scale });
+        // She is drawn wearing a crown already, so the floating one must not
+        // survive to sit next to it — it rises into her and dissolves.
+        const settle = this.state === 'crowned' ? Math.min(1, this.t / RISE.crowned) : 0;
+        const crownY = this.y + 34 - settle * 66 - (1 - k) * 8;
+        this.drawCrown(ctx, crownY, 1 - settle * settle);
+      } else {
+        this.drawCrown(ctx, this.y + 34, 1);
+      }
       return;
     }
+
+    // ---- the sink ----
+    if (this.dead) {
+      const k = Math.min(1, this.deathT / SINK);
+      // she drains downward and fades; the crown floats back up behind her
+      const sink = k * 40;
+      const fade = Math.max(0, 1 - k * 1.5);
+      if (fade > 0.01) {
+        draw(ctx, this.sprite(), this.x, this.y + sink, { alpha: fade, scale: this.scale });
+        draw(ctx, silhouette(this.sprite(), '#c4f6ef'), this.x, this.y + sink,
+          { alpha: fade * (1 - k) * 0.6, scale: this.scale });
+      }
+      // what is left of her: the crown, surfacing again
+      this.drawCrown(ctx, this.y + 34, Math.min(1, k * 2));
+      return;
+    }
+
     if (this.alpha <= 0.01) return;
 
     const hover = Math.sin(this.hoverT * 1.7) * 2;
@@ -532,9 +621,21 @@ export class DrownedQueen {
     for (const pr of this.projectiles) pr.drawLight(ctx, map);
 
     if (this.dead) {
-      if (this.deathT < 1.2) {
-        const k = 1 - this.deathT / 1.2;
-        addLight(ctx, this.x, this.y, 160 * k, 'rgba(150,240,235,ALPHA)', k);
+      const k = Math.max(0, 1 - this.deathT / SINK);
+      if (k > 0) addLight(ctx, this.x, this.y, 60 + 120 * k, 'rgba(150,240,235,ALPHA)', k);
+      // the crown keeps its own small glow once she is gone
+      addLight(ctx, this.x, this.y + 34, 40, 'rgba(232,104,138,ALPHA)', 0.5);
+      return;
+    }
+
+    if (!this.awake) {
+      addLight(ctx, this.x, this.y + 34, 46, 'rgba(232,104,138,ALPHA)', 0.55);
+      if (this.state === 'stir' || this.state === 'climb') {
+        const pull = this.state === 'climb' ? this.t / RISE.climb : this.t / RISE.stir;
+        addLight(ctx, this.x, this.y + 20, 60 + pull * 70, 'rgba(90,210,210,ALPHA)', 0.4 + pull * 0.5);
+      }
+      if (this.alpha > 0.01) {
+        addLight(ctx, this.x, this.y, 110, 'rgba(70,190,200,ALPHA)', 0.5 * this.alpha);
       }
       return;
     }

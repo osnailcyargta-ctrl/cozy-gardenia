@@ -23,21 +23,47 @@ book, walking home does.
 3. **The Hoard** — the **Dragon King**, 300 HP across two phases. At half health his wings tear
    apart: no more dashing, but he starts vanishing and reappearing behind you.
 
-### Book two — *The Drowned Queen*
+### Book two — *Underwater Mommy*
 
-Chained until the dragon falls, and written for the sword you made in book one.
+Chained until the dragon falls, and written for the sword you made in book one — which the save
+keeps for you, so arriving here without one is not possible.
 
-1. **The Shallows** — flooded stone, two drowned thralls, and a 90 HP coral gate. A silt-choked
-   chest by the entrance holds a spare blade, so the book is never a dead end.
+1. **The Shallows** — flooded stone, two drowned thralls, and a 90 HP coral gate.
 2. **The Coral Vault** — three sirens. They do not dash at you the way the dragon's servants do;
    they **haul you in**, then spit water bolts. The tier II carries the coral key. A chest in the
    **top-right corner** holds the **wave gun**.
 3. **The Tide Throne** — the **Drowned Queen**, 300 HP across two phases. Phase one is walls of
    water sweeping the room with a single gap, homing bubbles, and whirlpools that drag you off your
-   footing. At 150 the room floods for good: you wade from then on, the tides come in pairs, and she
-   can sink into the water and surface underneath you.
+   footing. At 150 the room floods for good: you wade from then on and the tides come in pairs.
+
+Nothing here is hoarded and nothing drops coin. The queen is not greedy.
 
 Book three is not written yet.
+
+### Meeting a boss, and leaving one
+
+Neither boss is standing there waiting. You find the Dragon King **asleep** — the camera pushes in,
+he lifts his head, and only then does the fight start; the boss bar does not appear until he is
+awake. You do not find the queen at all, only her crown floating on the water, and she rises out of
+it. Both collapse the same way they arrived: he falls back into the pose you found him in, and what
+is left of her is the crown, surfacing again.
+
+The player is locked out for the length of both cutscenes, and a book is not marked finished until
+the collapse has finished playing.
+
+### Saving
+
+Leaving a book writes it down: gates you broke stay broken, chests you emptied stay empty, and your
+satchel comes with you across a page reload. **Enemies are not saved** — the things guarding a room
+come back, so a book you have already finished is still a book you can play.
+
+`game.wipeSave()` in the console forgets all of it; `game.unlockAll()` opens every written book.
+
+### No popups
+
+Killing a boss does not interrupt you and does not congratulate you. There is no victory screen
+anywhere in the game. You find out a story ended by walking back to the library and seeing the chain
+gone from the next book on the shelf.
 
 ## Controls
 
@@ -77,6 +103,7 @@ does nothing, because bare hands deal zero damage.
 | Siren I / II | 55 HP / 100 HP (tier II has 3 armour) |
 | Dragon King · Drowned Queen | 300 HP each, phase 2 at 150 |
 | Fireballs and bubbles | destructible — **2 sword swings** or **5 bare-handed** |
+| Boss wake / collapse | ~3.5s and ~2.5s, player locked out for both |
 | Dash | ~60px burst, i-frames while dashing, 0.75s cooldown |
 
 The wave gun is the first weapon that is not a swing. It plants a cone where you fired it and leaves
@@ -120,28 +147,45 @@ python3 -m http.server 8000
 
 ```
 index.html
-css/     reset · ui · popups · animations
+assets/music/    two streamed tracks
+tools/           the two boss sprite generators
+css/             reset · ui · popups · animations
 js/
   main.js          boot, game loop, combat glue, adaptive resolution
-  engine/          canvas · postfx · sprite · input · camera · particles · audio
+  engine/          canvas · postfx · sprite · input · camera · particles
+                   audio (synthesised sfx) · music (streamed tracks)
   data/            palette · sprites (all pixel art) · items · rooms
   world/           tilemap · collision · room
   entities/        player · servant · dragonking · drowned · drownedqueen
                    projectile · wave · gate · props
-  systems/         inventory · smelting
+  systems/         inventory · smelting · save
   ui/              hud · inventoryUI · craftUI · shelfUI · icons
 ```
 
-Sound is synthesised at runtime with WebAudio — oscillators and filtered noise bursts, no audio
-files.
+Sound effects are synthesised at runtime with WebAudio — oscillators and filtered noise bursts, no
+audio files. The two music tracks are the only assets in the repository, and they are **streamed
+through `<audio>`**, never decoded into WebAudio: several minutes of 48kHz stereo would be hundreds
+of megabytes as raw PCM. Nothing is fetched until a track is actually wanted, and the two-second
+now-playing card doubles as the buffering window — the music starts one second in, by which time the
+stream is ready.
 
-## Two notes on how it is built
+Music: *Lanterns of Oakvale* (the library) and *Library Rush* (inside a book), by Osnail-ctrl.
 
-The Dragon King and the Drowned Queen are not typed out pixel by pixel. At 40–48 pixels wide, a
-hand-typed figure turns to mush; both are generated from shape primitives — ellipses, tapers,
-triangles, wavering strands — under a top-lit shader, and the resulting rows are pasted into the
-sprite table. Everything 16×16 is hand-drawn, because at that size primitives are worse than a
+## Three notes on how it is built
+
+The Dragon King and the Drowned Queen are not typed out pixel by pixel. At 40–56 pixels wide, a
+hand-typed figure turns to mush. The queen is generated from shape primitives — ellipses, tapers,
+triangles, wavering strands — under a top-lit shader. The king's sleeping and waking poses are not
+drawn at all: `tools/gen-king.mjs` takes his existing idle frame and **bends the neck**, dropping
+each column past the shoulder a little further than the one before it, so the head curves to the
+floor without coming off the body. Drawing him three times by hand would have produced three
+different animals. Everything 16×16 is hand-drawn, because at that size primitives are worse than a
 careful hand.
+
+Zooming the camera is a **crop of the scene buffer**, not a transform — blowing up a source rect
+with nearest-neighbour keeps the pixel grid exact where scaling the output would smear it. Every
+pass that samples the scene shares that one rect, bloom and chromatic aberration included, or the
+glow drifts off the thing that is glowing.
 
 Room layout is guarded by a flood fill rather than by eye. For every room it asserts that the
 forward exit is **unreachable** while its gate is shut, reachable once it opens, and that the way

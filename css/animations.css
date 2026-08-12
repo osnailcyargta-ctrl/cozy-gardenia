@@ -73,11 +73,12 @@
   100% { transform: translateX(-50%) scaleY(1.14) scaleX(0.94); opacity: 1; }
 }
 
-/* A single page swinging across the view. Unlike page-sweep it starts already
-   covering the screen edge, so a room swap behind it is never visible. */
-@keyframes page-turn {
-  0%   { transform: perspective(1200px) rotateY(-92deg); opacity: 0.2; }
-  38%  { transform: perspective(1200px) rotateY(-6deg);  opacity: 1; }
-  52%  { transform: perspective(1200px) rotateY(4deg);   opacity: 1; }
-  100% { transform: perspective(1200px) rotateY(92deg);  opacity: 0.15; }
+/* The now-playing card travels right-to-left the whole time it is on screen —
+   it enters sliding left and leaves still sliding left, so it reads as one
+   continuous pass rather than a box that pops in and reverses. */
+@keyframes track-card {
+  0%   { opacity: 0; transform: translateX(46px); }
+  18%  { opacity: 1; transform: translateX(0); }
+  80%  { opacity: 1; transform: translateX(-10px); }
+  100% { opacity: 0; transform: translateX(-56px); }
 }

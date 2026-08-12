@@ -160,11 +160,17 @@ export class Room {
           if (e.dropsKey) this.addDrop('key', e.x, e.y);
           this.scatterCoins(e, 'gold_coin');
         }
-        if (e instanceof Siren) {
-          if (e.dropsKey) this.addDrop('coral_key', e.x, e.y);
-          this.scatterCoins(e, 'gold_coin');
-        }
-        if (e.isBoss) game?.onBossDefeated?.();
+        // Book two's drowned leave no coin. The queen is not a hoarder, so
+        // nothing under her rule is worth carrying out except the key.
+        if (e instanceof Siren && e.dropsKey) this.addDrop('coral_key', e.x, e.y);
+      }
+
+      // A boss counts as beaten when its collapse has finished playing, not
+      // when its health hits zero — otherwise the book closes and the music
+      // changes in the middle of the death animation.
+      if (e.isBoss && e.defeatDone && !e.defeatReported) {
+        e.defeatReported = true;
+        game?.onBossDefeated?.();
       }
     }
 

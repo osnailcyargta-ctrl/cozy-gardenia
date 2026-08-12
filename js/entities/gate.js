@@ -122,6 +122,18 @@ export class Gate {
     }
   }
 
+  /**
+   * Open with no sound, no shake and no debris — for restoring a gate you
+   * already broke on a previous visit. Replaying the break would announce a
+   * victory you won an hour ago.
+   */
+  openSilently() {
+    this.open = true;
+    this.solid = false;
+    this.hp = 0;
+    this.openT = 1;
+  }
+
   update(dt) {
     this.shake = Math.max(0, this.shake - dt);
     this.flash = Math.max(0, this.flash - dt);

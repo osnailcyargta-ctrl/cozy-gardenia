@@ -20,7 +20,6 @@ const S = {
   coral: decode(BLOCKS.coral[0], 'coral'),
   kelp0: decode(BLOCKS.kelp[0], 'kelp0'),
   kelp1: decode(BLOCKS.kelp[1], 'kelp1'),
-  pearlPile: decode(BLOCKS.pearlPile[0], 'pearlPile'),
 };
 
 export class Prop {
@@ -38,7 +37,6 @@ export class Prop {
       shelf:     [30, 22, true, 'Shelf'],
       torch:     [0, 0,  false, null],
       coinPile:  [8, 4,  true,  null],
-      pearlPile: [8, 4,  true,  null],
       coral:     [7, 6,  true,  null],
       // kelp is scenery you walk straight through — a reef that blocks
       // movement turns the room into a maze nobody asked for
@@ -130,7 +128,6 @@ export class Prop {
       case 'anvil':   return S.anvil;
       case 'shelf':   return S.shelf;
       case 'coinPile': return S.coinPile;
-      case 'pearlPile': return S.pearlPile;
       case 'coral':   return S.coral;
       case 'kelp':    return Math.floor(this.t * 1.6) % 2 ? S.kelp1 : S.kelp0;
       case 'torch':   return Math.floor(this.t * 6.5) % 2 ? S.torch1 : S.torch0;
@@ -189,9 +186,6 @@ export class Prop {
       }
       case 'coinPile':
         addLight(ctx, this.x, this.y, 40, 'rgba(240,204,90,ALPHA)', 0.42);
-        break;
-      case 'pearlPile':
-        addLight(ctx, this.x, this.y, 44, 'rgba(150,240,235,ALPHA)', 0.45);
         break;
       case 'coral': {
         // slow breathing glow rather than a flicker — coral is not on fire

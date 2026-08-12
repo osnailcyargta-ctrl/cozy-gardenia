@@ -32,6 +32,14 @@
     <div id="hotbar"></div>
   </div>
 
+  <!-- now playing: slides in from the right, two seconds, music follows at 1s -->
+  <div id="music-toast" class="hidden">
+    <span class="mt-name"></span>
+    <span class="mt-arrow">--=&gt;</span>
+    <span class="mt-by">"by Osnail-ctrl"</span>
+    <span class="mt-arrow">&lt;=--</span>
+  </div>
+
   <!-- ============ Title ============ -->
   <div id="title-screen">
     <div class="title-inner">
@@ -56,7 +64,7 @@
         </div>
         <div class="book locked" data-book="1">
           <div class="book-3d">
-            <div class="cover front"><span class="book-title">The Drowned Queen</span></div>
+            <div class="cover front"><span class="book-title">Underwater Mommy</span></div>
             <div class="pages"></div>
             <div class="cover back"></div>
           </div>
@@ -133,13 +141,6 @@
       <h2 class="dead">You died</h2>
       <p>The story rewinds a page.</p>
       <button id="respawn-btn">Continue</button>
-    </div>
-  </div>
-  <div id="victory-screen" class="overlay hidden">
-    <div class="panel center-panel">
-      <h2 class="won" id="victory-title">The dragon falls</h2>
-      <p id="victory-text">The hoard is quiet at last. The book closes itself.</p>
-      <button id="victory-btn">Return to the library</button>
     </div>
   </div>
 

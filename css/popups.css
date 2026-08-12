@@ -430,6 +430,3 @@
 }
 
 /* room-to-room turn: same page, snappier, so movement never feels gated */
-.page-flip.quick {
-  animation: page-turn 0.56s cubic-bezier(.5,0,.35,1) forwards;
-}

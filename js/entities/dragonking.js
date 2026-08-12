@@ -1,4 +1,8 @@
-// The Dragon King — 300 HP, two phases.
+// The Dragon King — 300 HP, two phases, bracketed by two cutscenes.
+//
+// You find him asleep. The camera pushes in, he lifts his head, and only then
+// does the fight start — the boss bar does not even appear until he is awake.
+// When he falls he collapses back into exactly the pose you found him in.
 //
 // Phase 1 (300 -> 150): dash · volley · dash · volley · volley · laser · repeat
 // Phase 2 (150 -> 0)  : wings are shredded, so no more dashing. Instead it can
@@ -19,6 +23,10 @@ const R = decodeSet(KING, 'king');
 const L = flipSet(R, 'kingL');
 
 const MAX_HP = 300;
+
+// The wake-up, in seconds: head down, head half up, then the roar.
+const WAKE = { sleep: 1.5, waking: 1, rise: 0.7 };
+const FALL = 2.5;
 
 // Phase 1 script. 'volley' fires three curving fireballs 0.3s apart.
 const SCRIPT_1 = ['dash', 'volley', 'dash', 'volley', 'volley', 'laser'];
@@ -49,8 +57,12 @@ export class DragonKing {
     this.hoverT = 0;
 
     this.step = 0;
-    this.state = 'intro';
+    this.state = 'sleep';
     this.t = 0;
+    // The player does not get to act while he is waking or dying.
+    this.locksPlayer = true;
+    this.awake = false;
+    this.defeatDone = false;
     this.volleyLeft = 0;
     this.volleyTimer = 0;
     this.dashAngle = 0;
@@ -73,7 +85,9 @@ export class DragonKing {
   get script() { return this.phase === 1 ? SCRIPT_1 : SCRIPT_2; }
 
   hurt(amount, fromX, fromY, knockScale = 1) {
-    if (this.dead || this.invisible || amount <= 0) return 0;
+    // Nothing lands before the fight starts. The player is frozen through the
+    // wake-up anyway; this makes it true for everything else too.
+    if (this.dead || !this.awake || this.invisible || amount <= 0) return 0;
     this.hp -= amount;
     this.hurtFlash = 0.18;
     sfx.hit();
@@ -125,9 +139,14 @@ export class DragonKing {
     this.dead = true;
     this.deathT = 0;
     this.hp = 0;
+    this.state = 'dying';
+    this.locksPlayer = true;
+    this.invisible = false;
+    this.alpha = 1;
     for (const p of this.projectiles) p.dead = true;
     sfx.death();
     cam.shake(14, 1.6);
+    cam.zoomTo(this.x, this.y, 1.9, 0.9);
     P.burst(this.x, this.y, 60, {
       colour: '#ffb648', speed: 170, life: 1.4, size: 3, grav: 60, drag: 0.94,
       glow: 20, glowColour: 'rgba(255,170,60,ALPHA)',
@@ -178,7 +197,76 @@ export class DragonKing {
     for (const pr of this.projectiles) pr.update(dt, player, map);
     this.projectiles = this.projectiles.filter((p) => !p.dead);
 
-    if (this.dead) { this.deathT += dt; return; }
+    if (this.dead) {
+      this.deathT += dt;
+      // embers guttering out of the wreck
+      if (this.deathT < FALL && Math.random() > 0.55) {
+        P.spawn({
+          x: this.x + (Math.random() - 0.5) * 70, y: this.y + (Math.random() - 0.5) * 30,
+          vx: (Math.random() - 0.5) * 30, vy: -18 - Math.random() * 22,
+          life: 0.9, size: 2, colour: Math.random() > 0.5 ? '#e87a2c' : '#8f2f16',
+          drag: 0.95, glow: 10, glowColour: 'rgba(230,110,40,ALPHA)',
+        });
+      }
+      if (this.deathT >= FALL && this.locksPlayer) {
+        this.locksPlayer = false;
+        this.defeatDone = true;
+        cam.zoomOut(0.7);
+      }
+      return;
+    }
+
+    // ---- waking up ----
+    if (!this.awake) {
+      this.t += dt;
+      this.hoverT += dt * 0.25;
+      this.anim += dt * 1.2;
+
+      if (this.state === 'sleep') {
+        if (!this.introDone) {
+          this.introDone = true;
+          cam.zoomTo(this.x, this.y - 6, 2.2, 0.85);
+        }
+        // slow breathing embers from the nostrils
+        if (Math.random() > 0.93) {
+          P.spawn({
+            x: this.mouthX(), y: this.mouthY() + 6,
+            vx: (this.flip ? -1 : 1) * 14, vy: -8,
+            life: 1.1, size: 2, colour: '#5c1a10', drag: 0.97,
+            glow: 6, glowColour: 'rgba(180,70,30,ALPHA)',
+          });
+        }
+        if (this.t > WAKE.sleep) { this.state = 'waking'; this.t = 0; sfx.charge(); }
+      } else if (this.state === 'waking') {
+        if (Math.random() > 0.7) {
+          P.spawn({
+            x: this.mouthX(), y: this.mouthY() + 3,
+            vx: (this.flip ? -1 : 1) * 26, vy: -14,
+            life: 0.7, size: 2, colour: '#e87a2c', drag: 0.94,
+            glow: 10, glowColour: 'rgba(230,110,40,ALPHA)',
+          });
+        }
+        if (this.t > WAKE.waking) {
+          this.state = 'rise';
+          this.t = 0;
+          sfx.roar();
+          cam.shake(9, 0.8);
+          cam.zoomOut(WAKE.rise);
+          P.burst(this.mouthX(), this.mouthY(), 26, {
+            colour: '#ffb648', speed: 130, life: 0.7, size: 2, drag: 0.9,
+            glow: 16, glowColour: 'rgba(255,170,60,ALPHA)',
+          });
+        }
+      } else if (this.state === 'rise') {
+        if (this.t > WAKE.rise) {
+          this.awake = true;
+          this.locksPlayer = false;
+          this.step = -1;
+          this.advance();
+        }
+      }
+      return;
+    }
 
     this.t += dt;
     this.hoverT += dt;
@@ -199,11 +287,6 @@ export class DragonKing {
     let mx = 0, my = 0;
 
     switch (this.state) {
-      case 'intro':
-        if (!this.introDone) { this.introDone = true; sfx.roar(); cam.shake(7, 1); }
-        if (this.t > 1.4) { this.step = -1; this.advance(); }
-        break;
-
       case 'phaseshift':
         if (this.t > 1.5) { this.step = -1; this.advance(); }
         break;
@@ -349,6 +432,9 @@ export class DragonKing {
   sprite() {
     const set = this.flip ? L : R;
     const f = Math.floor(this.anim) % 2;
+    if (this.state === 'sleep' || this.state === 'dying') return set.sleep[0];
+    if (this.state === 'waking') return set.waking[0];
+    if (this.state === 'rise') return set.waking[0];
     if (this.phase === 2) return set.broken[f];
     if (this.state === 'laserwind' || this.state === 'laser' || this.state === 'volley') {
       return set.breathe[0];
@@ -360,13 +446,25 @@ export class DragonKing {
     for (const pr of this.projectiles) pr.draw(ctx, map);
 
     if (this.dead) {
-      const k = Math.min(1, this.deathT / 1.2);
-      if (k >= 1) return;
+      // He goes down into the pose you found him in, settles, then burns out.
+      const k = Math.min(1, this.deathT / FALL);
+      const settle = Math.min(1, this.deathT / 0.9);
       const spr = this.sprite();
-      ctx.save();
-      ctx.globalAlpha = 1 - k;
-      draw(ctx, silhouette(spr, k > 0.5 ? '#4a0f18' : '#ffb648'), this.x, this.y + k * 10, { alpha: 1 - k, scale: this.scale });
-      ctx.restore();
+      const drop = settle * 12;
+      const shudder = this.deathT < 0.9 ? Math.sin(this.deathT * 30) * (1 - settle) * 3 : 0;
+
+      if (k < 0.62) {
+        draw(ctx, spr, this.x + shudder, this.y + drop, { scale: this.scale });
+        if (this.deathT < 0.5) {
+          draw(ctx, silhouette(spr, '#ffb648'), this.x + shudder, this.y + drop,
+            { alpha: 1 - this.deathT / 0.5, scale: this.scale });
+        }
+      } else {
+        const fade = (k - 0.62) / 0.38;
+        draw(ctx, spr, this.x, this.y + drop, { alpha: 1 - fade, scale: this.scale });
+        draw(ctx, silhouette(spr, '#4a0f18'), this.x, this.y + drop,
+          { alpha: (1 - fade) * 0.7, scale: this.scale });
+      }
       return;
     }
 
@@ -410,9 +508,8 @@ export class DragonKing {
     for (const pr of this.projectiles) pr.drawLight(ctx, map);
 
     if (this.dead) {
-      if (this.deathT < 1.2) {
-        addLight(ctx, this.x, this.y, 160 * (1 - this.deathT / 1.2), 'rgba(255,170,60,ALPHA)', 1 - this.deathT / 1.2);
-      }
+      const k = Math.max(0, 1 - this.deathT / FALL);
+      if (k > 0) addLight(ctx, this.x, this.y, 60 + 130 * k, 'rgba(255,170,60,ALPHA)', k);
       return;
     }
     if (this.alpha <= 0.01) return;

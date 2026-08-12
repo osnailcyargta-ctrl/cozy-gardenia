@@ -91,7 +91,7 @@ let t = 0;
  * @param sctx    display context
  * @param sceneC  low-res scene canvas (lights already composited in)
  * @param dt      seconds
- * @param mood    per-room tuning: { fog, fogColor, vignette, tint }
+ * @param mood    per-room tuning: { fog, fogColor, vignette, tint, zoom, zoomX, zoomY }
  */
 export function present(sctx, sceneC, dt, mood = {}) {
   t += dt;
@@ -99,13 +99,26 @@ export function present(sctx, sceneC, dt, mood = {}) {
   if (!grainTile) grainTile = makeGrain();
   if (!fogTile) fogTile = makeFog();
 
+  // ---- 0. the crop the whole chain shares ----
+  //
+  // Zooming is a source rect, not a transform: cropping the scene buffer and
+  // blowing the crop up with nearest-neighbour keeps the pixel grid exact,
+  // where scaling the output would smear it. Every pass that samples the scene
+  // has to use this same rect — bloom and the aberration fringes included, or
+  // the glow drifts off the thing that is glowing.
+  const zoom = Math.max(1, mood.zoom || 1);
+  const sw = VW / zoom;
+  const sh = VH / zoom;
+  const sx = Math.max(0, Math.min(VW - sw, (mood.zoomX ?? VW / 2) - sw / 2));
+  const sy = Math.max(0, Math.min(VH - sh, (mood.zoomY ?? VH / 2) - sh / 2));
+
   // ---- 1. upscale, nearest neighbour ----
   sctx.imageSmoothingEnabled = false;
   sctx.clearRect(0, 0, W, H);
 
   const shakeX = mood.shakeX || 0;
   const shakeY = mood.shakeY || 0;
-  sctx.drawImage(sceneC, 0, 0, VW, VH, shakeX, shakeY, W, H);
+  sctx.drawImage(sceneC, sx, sy, sw, sh, shakeX, shakeY, W, H);
 
   // ---- 2. bloom ----
   if (FX.bloom) {
@@ -113,7 +126,7 @@ export function present(sctx, sceneC, dt, mood = {}) {
     bright.x.globalCompositeOperation = 'source-over';
     bright.x.clearRect(0, 0, BW, BH);
     bright.x.imageSmoothingEnabled = true;
-    bright.x.drawImage(sceneC, 0, 0, BW, BH);
+    bright.x.drawImage(sceneC, sx, sy, sw, sh, 0, 0, BW, BH);
 
     // crush the darks so only highlights survive
     bright.x.globalCompositeOperation = 'multiply';
@@ -197,8 +210,8 @@ export function present(sctx, sceneC, dt, mood = {}) {
     const amt = mood.aberration * 3;
     sctx.globalCompositeOperation = 'lighter';
     sctx.globalAlpha = 0.16 * mood.aberration;
-    sctx.drawImage(sceneC, 0, 0, VW, VH, shakeX - amt, shakeY, W, H);
-    sctx.drawImage(sceneC, 0, 0, VW, VH, shakeX + amt, shakeY, W, H);
+    sctx.drawImage(sceneC, sx, sy, sw, sh, shakeX - amt, shakeY, W, H);
+    sctx.drawImage(sceneC, sx, sy, sw, sh, shakeX + amt, shakeY, W, H);
     sctx.globalAlpha = 1;
     sctx.globalCompositeOperation = 'source-over';
   }

@@ -6,6 +6,7 @@ import * as P from './engine/particles.js';
 import * as cam from './engine/camera.js';
 import * as input from './engine/input.js';
 import { sfx, unlock as unlockAudio } from './engine/audio.js';
+import * as music from './engine/music.js';
 
 import { LIBRARY, BOOKS } from './data/rooms.js';
 import { FIST, ITEM_DEFS } from './data/items.js';
@@ -17,6 +18,7 @@ import { WaveField } from './entities/wave.js';
 
 import { Container } from './systems/inventory.js';
 import { Smelter } from './systems/smelting.js';
+import * as save from './systems/save.js';
 
 import * as hud from './ui/hud.js';
 import * as invUI from './ui/inventoryUI.js';
@@ -38,7 +40,7 @@ const game = {
   smelter: new Smelter(),
   bookIndex: 0,
   bookDefeated: false,
-  cleared: loadCleared(),
+  cleared: save.cleared(),
   paused: false,
   time: 0,
 
@@ -47,25 +49,20 @@ const game = {
   syncWeapon,
   enterBook,
   onBossDefeated,
-  // console escape hatch: open every book without finishing the one before it
-  unlockAll: () => { BOOKS.forEach((b, i) => b.rooms && game.cleared.add(i)); shelfUI.refresh(); },
+  // console escape hatches
+  unlockAll: () => {
+    BOOKS.forEach((b, i) => { if (b.rooms) { game.cleared.add(i); save.markCleared(i); } });
+    shelfUI.refresh();
+  },
+  wipeSave: () => { save.wipe(); game.cleared = new Set(); shelfUI.refresh(); },
 };
 
 window.game = game;   // handy for debugging from the console
 
-/**
- * Which books you have finished, remembered across reloads. Without this every
- * refresh would put book two back behind the dragon, and there is no save file
- * to carry your sword through — so you would be locked out by your own progress.
- */
-function loadCleared() {
-  try { return new Set(JSON.parse(localStorage.getItem('itb.cleared') || '[]')); }
-  catch { return new Set(); }
-}
-
-function saveCleared() {
-  try { localStorage.setItem('itb.cleared', JSON.stringify([...game.cleared])); } catch { /* private mode */ }
-}
+// The satchel outlives a reload, because the unlock and the sword have to
+// travel together: book two only opens once book one is done, and book one is
+// only finishable with the sword you forged in it.
+save.loadSatchel(game.inventory);
 
 /* ============================================================
    Boot
@@ -79,15 +76,10 @@ hotbar.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
-const victoryScreen = document.getElementById('victory-screen');
 const fade = document.getElementById('fade');
 
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('respawn-btn').addEventListener('click', respawn);
-document.getElementById('victory-btn').addEventListener('click', () => {
-  victoryScreen.classList.add('hidden');
-  goToLibrary();
-});
 
 function startGame() {
   unlockAudio();
@@ -100,18 +92,14 @@ function startGame() {
   }, 600);
 }
 
-// What the victory screen says, per book. Written at the moment you walk back
-// into the library, because that is when the book actually closes.
-const ENDINGS = {
-  0: ['The dragon falls', 'The hoard is quiet at last. On the shelf, a chain slips loose.'],
-  1: ['The tide goes out', 'The throne room drains. What is left of the queen is only water.'],
-};
-
 function goToLibrary() {
   hud.setPrompt(null);
-  const finished = game.bookDefeated;
-  const endedBook = game.bookIndex;
-  if (game.player) game.player.speedMul = 1;
+  // Leaving a book is the moment the player thinks of as "done for now", so it
+  // is the moment the world is written down.
+  if (game.scene === 'book' && game.rooms.length) {
+    save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex());
+  }
+  if (game.player) { game.player.speedMul = 1; game.player.frozen = false; }
   game.scene = 'library';
   game.rooms = [];
   game.room = new Room(LIBRARY);
@@ -126,15 +114,11 @@ function goToLibrary() {
   P.clear();
   cam.reset();
   flashFromBlack();
+  music.play('oakvale');
 
-  if (finished) {
-    game.bookDefeated = false;
-    const [title, text] = ENDINGS[endedBook] || ENDINGS[0];
-    document.getElementById('victory-title').textContent = title;
-    document.getElementById('victory-text').textContent = text;
-    shelfUI.refresh();
-    setTimeout(() => victoryScreen.classList.remove('hidden'), 700);
-  }
+  // No popup. A finished book is something you notice on the shelf.
+  game.bookDefeated = false;
+  shelfUI.refresh();
 }
 
 /* ============================================================
@@ -152,7 +136,12 @@ function enterBook(index) {
   game.bookDefeated = false;
   game.smelter.reset();
 
+  // Gates you broke stay broken and chests you emptied stay empty. Enemies are
+  // not restored, so a finished book is still a book you can play.
+  save.restoreBook(index, game.rooms);
+
   game.scene = 'book';
+  music.play('rush');
   loadRoom(0, 'forward');
 }
 
@@ -174,9 +163,8 @@ function loadRoom(index, dir) {
   hud.setRoom(def.name);
   hud.setHearts(game.player.hp, game.player.maxHp);
 
-  const boss = room.boss;
-  if (boss && !boss.dead) hud.showBoss(boss.name);
-  else hud.hideBoss();
+  bossBarUp = false;
+  hud.hideBoss();
 
   P.clear();
   cam.reset();
@@ -194,9 +182,14 @@ function flashFromBlack() {
    ============================================================ */
 
 let transitioning = false;
+let bossBarUp = false;
 
 function tryRoomTransition() {
   if (transitioning || game.scene !== 'book') return;
+  // Not during a boss cutscene. The player is frozen, but standing on the
+  // doorway tile would still drag them out of the room — which abandons the
+  // boss mid-collapse and leaves the book unfinished.
+  if (game.room.boss?.locksPlayer) return;
   const exit = game.room.exitUnder(game.player);
   if (!exit) return;
 
@@ -218,26 +211,10 @@ function tryRoomTransition() {
   }
 }
 
-const pageEl = document.getElementById('book-transition');
-
-/**
- * Turn a page over the screen and swap rooms while it covers the view. Moving
- * between rooms is moving through a book, so a page turn says that where a
- * black fade said nothing.
- */
 function fadeThen(fn) {
-  const flip = pageEl.querySelector('.page-flip');
-  pageEl.classList.remove('hidden');
-  flip.classList.add('quick');
-  flip.style.animation = 'none';
-  void flip.offsetWidth;          // restart the animation
-  flip.style.animation = '';
-
-  setTimeout(fn, 260);            // swap while the page covers the screen
-  setTimeout(() => {
-    pageEl.classList.add('hidden');
-    flip.classList.remove('quick');
-  }, 560);
+  fade.classList.remove('hidden', 'from-black');
+  fade.classList.add('to-black');
+  setTimeout(() => { fn(); }, 440);
 }
 
 /* ============================================================
@@ -246,8 +223,7 @@ function fadeThen(fn) {
 
 function anyPopupOpen() {
   return invUI.isOpen() || craftUI.smelterOpen() || craftUI.anvilOpen() || shelfUI.isOpen()
-    || !deathScreen.classList.contains('hidden')
-    || !victoryScreen.classList.contains('hidden');
+    || !deathScreen.classList.contains('hidden');
 }
 
 function closeAllPopups() {
@@ -388,14 +364,15 @@ function refreshInventory() {
    ============================================================ */
 
 /**
- * Killing the boss only marks the book done. The victory screen waits until you
- * have actually walked back out to the library, so finishing is something you
- * travel to rather than something that interrupts you mid-room.
+ * Killing the boss only marks the book done — no popup, ever. You find out the
+ * story ended by walking back to the library and seeing the chain gone from the
+ * next book on the shelf.
  */
 function onBossDefeated() {
   game.bookDefeated = true;
   game.cleared.add(game.bookIndex);
-  saveCleared();
+  save.markCleared(game.bookIndex);
+  save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex());
   hud.hideBoss();
   sfx.victory();
 }
@@ -485,6 +462,7 @@ function update(dt) {
   game.renderPaused = popups;
 
   handleKeys(popups);
+  music.update(dt);
 
   // the forge keeps running while you're away from it
   const produced = game.smelter.update(dt);
@@ -507,25 +485,33 @@ function update(dt) {
   const room = game.room;
   if (!p || !room) return;
 
-  // --- dash ---
-  if ((input.pressed('Space') || input.pressed('KeyF')) && !p.dead) {
-    const ax = input.axis();
-    p.startDash(ax.x, ax.y);
-  }
+  // A boss waking up or going down owns the screen: the player keeps breathing
+  // but does not get to act, and cannot be hit while they are locked out.
+  const cinematic = !!room.boss?.locksPlayer;
+  p.frozen = cinematic;
+  if (cinematic) p.invuln = Math.max(p.invuln, 0.2);
 
-  // --- attack ---
-  if (input.tookLeftClick() && !p.dead) {
-    const angle = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
-    p.startAttack(angle);
-  }
-  if (p.attacking && !p.swungThisAttack && p.attackT < 0.13) {
-    p.swungThisAttack = true;
-    resolveSwing();
-  }
+  if (!cinematic) {
+    // --- dash ---
+    if ((input.pressed('Space') || input.pressed('KeyF')) && !p.dead) {
+      const ax = input.axis();
+      p.startDash(ax.x, ax.y);
+    }
 
-  // --- interact (E or right click) ---
-  if ((input.pressed('KeyE') || input.tookRightClick()) && !p.dead) {
-    doInteract();
+    // --- attack ---
+    if (input.tookLeftClick() && !p.dead) {
+      const angle = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
+      p.startAttack(angle);
+    }
+    if (p.attacking && !p.swungThisAttack && p.attackT < 0.13) {
+      p.swungThisAttack = true;
+      resolveSwing();
+    }
+
+    // --- interact (E or right click) ---
+    if ((input.pressed('KeyE') || input.tookRightClick()) && !p.dead) {
+      doInteract();
+    }
   }
 
   p.update(dt, room.map, room.solids());
@@ -542,11 +528,17 @@ function update(dt) {
   hud.setHearts(p.hp, p.maxHp);
 
   const near = room.nearestInteractive(p);
-  hud.setPrompt(near && !p.dead ? near.label : null);
+  hud.setPrompt(near && !p.dead && !cinematic ? near.label : null);
 
+  // The bar arrives with the fight, not with the room: it would be a strange
+  // thing to stare at while the boss is still asleep.
   const boss = room.boss;
-  if (boss) {
-    if (!boss.dead) hud.updateBoss(boss.hp, boss.maxHp, boss.phase);
+  if (boss && !boss.dead && !boss.locksPlayer) {
+    if (!bossBarUp) { bossBarUp = true; hud.showBoss(boss.name); }
+    hud.updateBoss(boss.hp, boss.maxHp, boss.phase);
+  } else if (boss?.dead && bossBarUp) {
+    bossBarUp = false;
+    hud.hideBoss();
   }
 
   // --- death ---
@@ -642,6 +634,9 @@ function render(dt) {
   const lowHp = p ? 1 - p.hp / p.maxHp : 0;
   present(sctx, scene.canvas, dt, {
     ...room.mood,
+    zoom: cam.cam.zoom,
+    zoomX: cam.cam.zoomX,
+    zoomY: cam.cam.zoomY,
     shakeX: cam.totalX() * (screen.width / VW),
     shakeY: cam.totalY() * (screen.width / VW),
     vignette: (room.mood.vignette ?? 1) + lowHp * 0.5,
