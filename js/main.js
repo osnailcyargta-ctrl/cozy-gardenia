@@ -76,10 +76,37 @@ hotbar.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
+const resetScreen = document.getElementById('reset-screen');
 const fade = document.getElementById('fade');
 
 document.getElementById('start-btn').addEventListener('click', startGame);
 document.getElementById('respawn-btn').addEventListener('click', respawn);
+document.getElementById('reset-cancel').addEventListener('click', closeReset);
+document.getElementById('reset-confirm').addEventListener('click', () => {
+  save.wipe();
+  location.reload();          // the cleanest wipe: nothing in memory survives it
+});
+
+/**
+ * R opens it, and it always asks first. Throwing away every book you have
+ * finished should not be one keystroke away from a movement key.
+ */
+function openReset() {
+  if (resetOpen() || anyPopupOpen()) return;
+  resetScreen.classList.remove('hidden');
+  sfx.uiBig();
+}
+function closeReset() {
+  if (!resetOpen()) return;
+  resetScreen.classList.add('hidden');
+  sfx.ui();
+}
+function resetOpen() { return !resetScreen.classList.contains('hidden'); }
+
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyR' && !e.repeat) openReset();
+  else if (e.code === 'Escape' && resetOpen()) closeReset();
+});
 
 function startGame() {
   unlockAudio();
@@ -97,7 +124,7 @@ function goToLibrary() {
   // Leaving a book is the moment the player thinks of as "done for now", so it
   // is the moment the world is written down.
   if (game.scene === 'book' && game.rooms.length) {
-    save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex());
+    save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex(), game.smelter);
   }
   if (game.player) { game.player.speedMul = 1; game.player.frozen = false; }
   game.scene = 'library';
@@ -134,11 +161,11 @@ function enterBook(index) {
   game.roomIndex = 0;
   game.bookIndex = index;
   game.bookDefeated = false;
-  game.smelter.reset();
 
-  // Gates you broke stay broken and chests you emptied stay empty. Enemies are
-  // not restored, so a finished book is still a book you can play.
-  save.restoreBook(index, game.rooms);
+  // Gates you broke stay broken, chests you emptied stay empty, and the forge
+  // is exactly as you left it. Only a book you have never opened gets a cold
+  // one — resetting a half-finished smelt would burn the ore it was holding.
+  if (!save.restoreBook(index, game.rooms, game.smelter)) game.smelter.reset();
 
   game.scene = 'book';
   music.play('rush');
@@ -223,10 +250,12 @@ function fadeThen(fn) {
 
 function anyPopupOpen() {
   return invUI.isOpen() || craftUI.smelterOpen() || craftUI.anvilOpen() || shelfUI.isOpen()
-    || !deathScreen.classList.contains('hidden');
+    || !deathScreen.classList.contains('hidden')
+    || !resetScreen.classList.contains('hidden');
 }
 
 function closeAllPopups() {
+  closeReset();
   invUI.close();
   craftUI.closeSmelter();
   craftUI.closeAnvil();
@@ -372,7 +401,7 @@ function onBossDefeated() {
   game.bookDefeated = true;
   game.cleared.add(game.bookIndex);
   save.markCleared(game.bookIndex);
-  save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex());
+  save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex(), game.smelter);
   hud.hideBoss();
   sfx.victory();
 }

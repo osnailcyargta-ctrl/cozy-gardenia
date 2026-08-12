@@ -430,3 +430,20 @@
 }
 
 /* room-to-room turn: same page, snappier, so movement never feels gated */
+
+/* ---------- reset confirmation ---------- */
+.btn-row {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 18px;
+}
+.panel button.danger {
+  border-color: #7a2430;
+  color: #ffb9c0;
+  background: linear-gradient(180deg, rgba(60,16,24,0.9), rgba(34,9,14,0.94));
+}
+.panel button.danger:hover {
+  border-color: #cc3340;
+  box-shadow: 0 0 22px rgba(204,51,64,0.4);
+}

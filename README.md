@@ -53,11 +53,17 @@ the collapse has finished playing.
 
 ### Saving
 
-Leaving a book writes it down: gates you broke stay broken, chests you emptied stay empty, and your
-satchel comes with you across a page reload. **Enemies are not saved** — the things guarding a room
-come back, so a book you have already finished is still a book you can play.
+Leaving a book writes it down: gates you broke stay broken, chests you emptied stay empty, **the
+forge is exactly as you left it**, and your satchel comes with you across a page reload. **Enemies
+are not saved** — the things guarding a room come back, so a book you have already finished is still
+a book you can play.
 
-`game.wipeSave()` in the console forgets all of it; `game.unlockAll()` opens every written book.
+The forge has to be in there. Lighting an ore takes it out of your satchel the moment you press the
+button, so a save that dropped the smelter destroyed that ore outright — and book one hands you
+exactly three, which is exactly one sword. Losing one meant the sword could never be made.
+
+Press **R** to erase everything. It asks first.
+`game.wipeSave()` does the same from the console; `game.unlockAll()` opens every written book.
 
 ### No popups
 
@@ -79,6 +85,7 @@ gone from the next book on the shelf.
 | Left click *in inventory* | Move **one** item |
 | Right click *in inventory* | Move the **whole stack** |
 | `E`, `Q` or `Esc` | Close any panel |
+| `R` | Erase all saved progress (asks first) |
 | `F1` | Toggle post-processing (debug) |
 
 Panels close with `E` and `Q`, not just `Esc` — one hand stays on QWEASD and the
