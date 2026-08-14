@@ -109,6 +109,24 @@ export function restoreBook(bookIndex, rooms, smelter) {
   return true;
 }
 
+/* ---------- book four ---------- */
+/* An endless book has no gates and no chests to remember — only how deep you
+   have landed, which is the checkpoint it drops you back on. */
+
+export function deepest(bookIndex) { return data.books[bookIndex]?.deepest | 0; }
+
+export function setDeepest(bookIndex, depth) {
+  const b = (data.books[bookIndex] ||= {});
+  if (depth > (b.deepest | 0)) { b.deepest = depth; flush(); }
+}
+
+export function saveDungeon(bookIndex, depth, satchel, hotbarIndex) {
+  setDeepest(bookIndex, depth);
+  if (satchel) data.satchel = satchel.serialize();
+  data.hotbar = hotbarIndex | 0;
+  flush();
+}
+
 /** Forget everything — the reset button, and `game.wipeSave()` in the console. */
 export function wipe() {
   data = blank();

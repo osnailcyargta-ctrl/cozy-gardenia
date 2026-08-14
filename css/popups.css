@@ -206,9 +206,6 @@
 .book.locked:hover .lock  { animation: lock-shake 0.45s ease; }
 
 /* opening animation */
-.book.opening .cover.front { transform: translateZ(7px) rotateY(-165deg); }
-.book.opening .pages { animation: pages-flutter 0.7s ease; }
-.book.opening { transform: translateY(-14px) scale(1.15); z-index: 5; }
 
 /* ============================================================
    Inventory / chest grids
@@ -409,25 +406,6 @@
 /* ============================================================
    Book -> stage transition
    ============================================================ */
-#book-transition {
-  position: absolute; inset: 0;
-  z-index: 70;
-  pointer-events: none;
-  overflow: hidden;
-}
-.page-flip {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, #f5e7c4 0%, #e2cfa4 45%, #cdb78c 100%);
-  transform-origin: left center;
-  animation: page-sweep 1.05s cubic-bezier(.55,0,.35,1) forwards;
-  /* ruled lines and a spine shadow, so it reads as paper rather than a panel */
-  background-image:
-    linear-gradient(105deg, rgba(255,255,255,0.35), rgba(0,0,0,0.12) 60%),
-    repeating-linear-gradient(180deg, transparent 0 13px, rgba(120,96,60,0.13) 13px 14px),
-    linear-gradient(90deg, rgba(80,60,30,0.45) 0 6px, transparent 6px);
-  box-shadow: inset 22px 0 40px rgba(90,66,34,0.35);
-}
 
 /* room-to-room turn: same page, snappier, so movement never feels gated */
 
@@ -447,3 +425,44 @@
   border-color: #cc3340;
   box-shadow: 0 0 22px rgba(204,51,64,0.4);
 }
+
+/* ---------- merchant ---------- */
+.shop-panel { min-width: 420px; padding: 30px 34px 24px; }
+#shop-list { display: flex; flex-direction: column; gap: 10px; margin-top: 6px; }
+
+.shop-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 11px 14px;
+  background: linear-gradient(180deg, rgba(24,17,36,0.9), rgba(13,9,20,0.94));
+  border: 1px solid #3d3050;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, transform 0.1s ease, box-shadow 0.15s ease;
+}
+.shop-row:hover { border-color: #d8a05a; transform: translateX(3px); box-shadow: 0 0 18px rgba(216,160,90,0.25); }
+.shop-row canvas { image-rendering: pixelated; width: 32px; height: 32px; }
+.shop-text { display: flex; flex-direction: column; gap: 2px; flex: 1; }
+.shop-name { font-size: 14px; color: #e8d9b8; }
+.shop-desc { font-size: 11px; color: #7e6c92; }
+.shop-price { font-size: 15px; font-weight: 700; color: #f0cc5a; text-shadow: 0 0 10px rgba(240,204,90,0.4); }
+
+.shop-row.poor { cursor: not-allowed; }
+.shop-row.poor .shop-price { color: #8a5f5f; text-shadow: none; }
+.shop-row.poor:hover { border-color: #7a2430; transform: none; box-shadow: none; }
+.shop-row.sold { opacity: 0.4; cursor: default; }
+.shop-row.sold:hover { border-color: #3d3050; transform: none; box-shadow: none; }
+
+.shop-foot { margin-top: 16px; text-align: right; font-size: 12px; color: #9a8fb5; }
+.shop-foot b { color: #f0cc5a; font-size: 14px; }
+
+/* ---------- reforge ---------- */
+.anvil-reforge {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid #2e2440;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+}
+#reforge-info { font-size: 12px; color: #9a8fb5; min-height: 15px; text-align: center; }
+
+/* four books have to fit the panel, so they give up a little of their gap */
+.books { gap: 30px; }

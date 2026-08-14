@@ -7,9 +7,11 @@ import { Servant } from '../entities/servant.js';
 import { DragonKing } from '../entities/dragonking.js';
 import { Thrall, Siren } from '../entities/drowned.js';
 import { DrownedQueen } from '../entities/drownedqueen.js';
+import { Crawler } from '../entities/crawler.js';
+import { Nest } from '../entities/blackhole.js';
 import { Gate } from '../entities/gate.js';
 import { decode, draw } from '../engine/sprite.js';
-import { ITEMS } from '../data/sprites.js';
+import { ITEMS, NEST } from '../data/sprites.js';
 import { addLight } from '../engine/postfx.js';
 import * as P from '../engine/particles.js';
 import { sfx } from '../engine/audio.js';
@@ -17,6 +19,8 @@ import { TILE, VW, VH } from '../engine/canvas.js';
 
 const ITEM_SPR = {};
 for (const id in ITEMS) ITEM_SPR[id] = decode(ITEMS[id][0], 'item:' + id);
+
+const NEST_SPR = decode(NEST.block[0], 'nestBlock');
 
 /** An item lying on the floor, waiting to be walked over. */
 class Drop {
@@ -63,6 +67,25 @@ class Drop {
   }
 }
 
+/** A placed nest, with a ring showing how close the next hole is. */
+function drawNest(ctx, n) {
+  const spr = NEST_SPR;
+  ctx.fillStyle = 'rgba(0,0,0,0.42)';
+  ctx.beginPath();
+  ctx.ellipse(Math.round(n.x), Math.round(n.y + 6), 7, 2.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  draw(ctx, spr, n.x, n.y + Math.sin(n.t * 2.4) * 1.2);
+
+  ctx.save();
+  ctx.globalCompositeOperation = 'lighter';
+  ctx.strokeStyle = `rgba(221,180,255,${0.35 + n.pulse * 0.5})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(n.x, n.y, 11, -Math.PI / 2, -Math.PI / 2 + n.charge * Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+}
+
 export class Room {
   constructor(def) {
     this.def = def;
@@ -76,17 +99,25 @@ export class Room {
     this.gate = def.gate ? new Gate(def.gate) : null;
     this.drops = [];
     this.waves = [];
+    this.nests = [];      // placed blackholian nests
+    this.holes = [];      // and what they throw
     this.cleared = false;
     this.enteredT = 0;
 
     this.enemies = (def.enemies || []).map((e) => {
+      const m = e.statMul || 1;
       switch (e.type) {
-        case 'servant': return new Servant(e.x, e.y, e.tier);
-        case 'king':    return new DragonKing(e.x, e.y);
-        case 'thrall':  return new Thrall(e.x, e.y);
-        case 'siren':   return new Siren(e.x, e.y, e.tier);
-        case 'queen':   return new DrownedQueen(e.x, e.y);
-        default:        return null;
+        case 'servant':  return new Servant(e.x, e.y, e.tier, m);
+        case 'king':     return new DragonKing(e.x, e.y);
+        case 'thrall':   return new Thrall(e.x, e.y);
+        case 'siren':    return new Siren(e.x, e.y, e.tier, m);
+        case 'queen':    return new DrownedQueen(e.x, e.y);
+        // book four's roster, named so the generator reads as a list of monsters
+        case 'crawler':  return new Crawler(e.x, e.y, m);
+        case 'servant1': return new Servant(e.x, e.y, 1, m);
+        case 'servant2': return new Servant(e.x, e.y, 2, m);
+        case 'siren1':   return new Siren(e.x, e.y, 1, m);
+        default:         return null;
       }
     }).filter(Boolean);
 
@@ -112,6 +143,13 @@ export class Room {
 
   /** Plant a wave-gun cone. Lives in the room, not on the player. */
   addWave(wave) { this.waves.push(wave); }
+
+  /**
+   * Put down a nest. It belongs to the room, so when book four throws the room
+   * away the nest and everything it spawned go with it — which is exactly the
+   * rule that "black holes do not travel between rooms" asks for.
+   */
+  addNest(x, y) { this.nests.push(new Nest(x, y)); }
 
   /**
    * Copy over the parts of a previous instance of this same room that a death
@@ -156,6 +194,11 @@ export class Room {
       // check would silently miss it.
       if (e.dead && !e.lootDropped) {
         e.lootDropped = true;
+        if (e instanceof Crawler && e.dropsCoin) {
+          for (let i = 0; i < e.coinCount; i++) {
+            this.addDrop('gold_coin', e.x + (Math.random() - 0.5) * 12, e.y + (Math.random() - 0.5) * 12);
+          }
+        }
         if (e instanceof Servant) {
           if (e.dropsKey) this.addDrop('key', e.x, e.y);
           this.scatterCoins(e, 'gold_coin');
@@ -198,6 +241,13 @@ export class Room {
     for (const w of this.waves) w.update(dt, this.enemies);
     this.waves = this.waves.filter((w) => !w.dead);
 
+    for (const n of this.nests) {
+      const hole = n.update(dt);
+      if (hole) this.holes.push(hole);
+    }
+    for (const h of this.holes) h.update(dt, this.enemies);
+    this.holes = this.holes.filter((h) => !h.dead);
+
     if (!this.cleared && this.enemies.length && this.enemies.every((e) => e.dead)) {
       this.cleared = true;
     }
@@ -232,7 +282,8 @@ export class Room {
     ctx.drawImage(this.map.baked, 0, 0);
 
     // entities sorted by feet so things overlap correctly
-    const list = [...this.props, ...this.drops, ...this.enemies.filter((e) => !e.dead || e.deathT < 1.4)];
+    const list = [...this.props, ...this.drops, ...this.nests,
+      ...this.enemies.filter((e) => !e.dead || e.deathT < 1.4)];
     if (this.gate) list.push(this.gate);
     list.push(this._player);
 
@@ -241,6 +292,7 @@ export class Room {
     for (const e of list) {
       if (!e) continue;
       if (e instanceof Prop) e.draw(ctx, this);
+      else if (e instanceof Nest) drawNest(ctx, e);
       else if (e.isBoss) e.draw(ctx, this.map);
       else e.draw(ctx);
     }
@@ -252,6 +304,7 @@ export class Room {
 
     // waves sit on top of everything they are drowning
     for (const w of this.waves) w.draw(ctx);
+    for (const h of this.holes) h.draw(ctx);
   }
 
   drawLights(ctx) {
@@ -262,6 +315,9 @@ export class Room {
       else if (!e.dead || e.deathT < 0.4) e.drawLight(ctx);
     }
     for (const w of this.waves) w.drawLight(ctx);
+    for (const n of this.nests) addLight(ctx, n.x, n.y, 40 + n.charge * 26, 'rgba(168,102,224,ALPHA)', 0.4 + n.pulse * 0.5);
+    // last, so the holes can eat the light everything else just added
+    for (const h of this.holes) h.drawLight(ctx);
     if (this.gate) this.gate.drawLight(ctx);
     this._player?.drawLight?.(ctx);
   }

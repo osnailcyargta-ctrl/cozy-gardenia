@@ -14,6 +14,15 @@ export const ITEM_DEFS = {
 
   // ---- book two ----
   coral_key: { id: 'coral_key', name: 'Coral Key', stack: 8, desc: 'Opens a drowned gate' },
+
+  // ---- book four ----
+  blackholian_nest: {
+    id: 'blackholian_nest', name: "Blackholian's Nest", stack: 8,
+    desc: 'Place it · spits a black hole every 5s',
+    // Not a weapon: left click puts it down instead of swinging, and the item
+    // is spent doing it.
+    weapon: { kind: 'place', name: "Blackholian's Nest", damage: 0, range: 48, arc: 0, cooldown: 0.35, projectileChip: 0 },
+  },
   wave_gun: {
     id: 'wave_gun', name: 'Wave Gun', stack: 1,
     desc: '9 damage · 4 block cone · leaves a slowing tide',

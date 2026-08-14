@@ -80,6 +80,15 @@
           <div class="chain"><div class="lock"></div></div>
           <div class="book-label">Sealed</div>
         </div>
+        <div class="book locked" data-book="3">
+          <div class="book-3d">
+            <div class="cover front"><span class="book-title">Infinite Dungeon</span></div>
+            <div class="pages"></div>
+            <div class="cover back"></div>
+          </div>
+          <div class="chain"><div class="lock"></div></div>
+          <div class="book-label">Sealed</div>
+        </div>
       </div>
     </div>
   </div>
@@ -131,6 +140,19 @@
       </div>
       <button id="forge-btn">Forge</button>
       <div id="anvil-msg"></div>
+      <div class="anvil-reforge">
+        <div id="reforge-info"></div>
+        <button id="reforge-btn">Reforge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Merchant ============ -->
+  <div id="shop-popup" class="overlay hidden">
+    <div class="panel shop-panel">
+      <h2>The Merchant</h2>
+      <div id="shop-list"></div>
+      <div class="shop-foot">Purse: <b id="shop-purse">0</b> coins</div>
     </div>
   </div>
 
@@ -155,7 +177,6 @@
     </div>
   </div>
 
-  <div id="book-transition" class="hidden"><div class="page-flip"></div></div>
 </div>
 
 <script type="module" src="js/main.js"></script>

@@ -223,14 +223,19 @@ const S_TIER = {
 };
 
 export class Siren {
-  constructor(x, y, tier = 1) {
-    const cfg = S_TIER[tier];
+  constructor(x, y, tier = 1, statMul = 1) {
+    const base = S_TIER[tier];
+    const cfg = statMul === 1 ? base : {
+      ...base,
+      boltDamage: Math.round(base.boltDamage * statMul),
+      pullDamage: Math.round(base.pullDamage * statMul),
+    };
     this.x = x; this.y = y;
     this.tier = tier;
     this.cfg = cfg;
     this.hw = 5; this.hh = 6;
     this.radius = 8;
-    this.hp = cfg.hp; this.maxHp = cfg.hp;
+    this.hp = Math.round(base.hp * statMul); this.maxHp = this.hp;
     this.solid = false;
     this.dead = false;
     this.deathT = 0;

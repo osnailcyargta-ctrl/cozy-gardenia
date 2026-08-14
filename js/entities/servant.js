@@ -25,15 +25,21 @@ const CHASE = 'chase', STRIKE = 'strike', RECOVER = 'recover', RETREAT = 'retrea
       WINDUP = 'windup', DASH = 'dash', REST = 'rest';
 
 export class Servant {
-  constructor(x, y, tier = 1) {
+  constructor(x, y, tier = 1, statMul = 1) {
     const t = TIER[tier];
     this.x = x; this.y = y;
     this.tier = tier;
-    this.cfg = t;
+    // Copied, never mutated: TIER is shared by every servant in the game, and
+    // book four scales its own without touching books one and two.
+    this.cfg = statMul === 1 ? t : {
+      ...t,
+      damage: Math.round(t.damage * statMul),
+      dashDamage: Math.round(t.dashDamage * statMul),
+    };
     this.hw = 5; this.hh = 5;
     this.radius = 7;
-    this.hp = t.hp;
-    this.maxHp = t.hp;
+    this.hp = Math.round(t.hp * statMul);
+    this.maxHp = this.hp;
     this.solid = false;
     this.dead = false;
     this.deathT = 0;

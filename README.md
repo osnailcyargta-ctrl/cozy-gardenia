@@ -8,9 +8,9 @@ boot.
 
 ## The game
 
-You wake in a library with a single shelf holding three books. Each is a world, and each ends when
+You wake in a library with a single shelf holding four books. Each is a world, and each ends when
 you carry the win back out through the door you came in by — killing the boss does not close the
-book, walking home does.
+book, walking home does. The fourth has no end at all.
 
 ### Book one — *Greedy Ass Dragon*
 
@@ -40,6 +40,79 @@ Nothing here is hoarded and nothing drops coin. The queen is not greedy.
 
 Book three is not written yet.
 
+### Book four — *Infinite Dungeon*
+
+Unchained when the dragon falls, and sitting after the sealed third book. There is no boss, no story
+and no ending — only how far down you are willing to go.
+
+- **The rooms do not exist until you reach them.** Each is generated from a seed, flood-filled to
+  prove it can be crossed, and **released the moment you leave it**. There is no `B` tile anywhere in
+  this book: the door behind you is not locked, it is gone.
+- **Every tenth room is a landing** — no enemies, a portal home in the middle, a merchant, and often
+  an anvil or a smelter. Entering the book puts you on the deepest landing you have reached, and so
+  does dying. What a death costs you is the descent since the last landing, never the depth itself.
+- **It gets worse every two rooms.** Three monsters at first, then one more every second room, and
+  that "one" itself grows by one every ten. Past **25 alive** the surplus stops being more bodies and
+  becomes more HP and damage instead — 25 is what stays both playable and drawable.
+- **Zombie crawlers, dragon's servants I and II, and sirens I.** The crawler is new: it chases and it
+  bites, that is the whole of it, and it drops the coins everything down here is bought with. The
+  servants keep no key — there is nothing to unlock.
+
+| Room | wanted | on screen | HP / damage |
+|---|---|---|---|
+| 1 | 3 | 3 | ×1 |
+| 11 | 9 | 9 | ×1 |
+| 21 | 20 | 20 | ×1 |
+| 25 | 26 | 25 | ×1.06 |
+| 41 | 57 | 25 | ×2.92 |
+
+### Modifiers, and what coins are for
+
+Weapons out of a chest, off an anvil, or off the merchant can carry a modifier. "Speed" is swing
+speed — the cooldown between attacks — never how fast you walk.
+
+| Modifier | Effect | Forging / reforging |
+|---|---|---|
+| — | — | 45% / 35% |
+| Light | +30% swing speed, −25% damage | 22% / 22% |
+| Heavy | −25% swing speed, +40% damage | 22% / 22% |
+| Broken | −20% swing speed, −30% damage | never / 16% |
+| Legendary | +15% speed, +35% damage, +25% crit | 11% / 5% |
+
+Forging can come out plain but never broken — you only break a weapon by gambling with one you
+already have. **Reforge** at any anvil costs **20 coins** and rerolls what you are holding, which is
+the only way to get `broken` and the reason it is a gamble. A **critical** is one roll per swing, not
+per target, and multiplies damage by **1.75**.
+
+The merchant stocks two of these per landing, fixed for that room:
+
+| | |
+|---|---|
+| Iron Sword *(random modifier)* | 20c |
+| Wave Gun | 30c |
+| Blackholian's Nest ×2 | 40c |
+| Iron Bar ×2 | 15c |
+| Iron Ore ×3 | 8c |
+| Coal ×2 | 5c |
+
+The sword is cheapest because you can forge one for free out of ore you find; the nest is dearest
+because nothing else in the game does what it does.
+
+### Blackholian's Nest
+
+A block, not a weapon — left click puts it down within three blocks of you, and the item is spent
+doing it. A placed nest throws **one black hole every five seconds**. Each hole drifts toward the
+nearest enemy, hauls everything within about four blocks into itself, chews on what it catches, and
+collapses after three seconds. Its damage carries **no knockback**, for the same reason the wave gun
+does not: a thing meant to hold enemies in place must not punt them out.
+
+The hole is the one thing in this game that **takes light away**. Because lighting is a light map
+that gets multiplied over the scene, painting black into that buffer genuinely darkens the floor
+around it — an additive glow layer can only ever add.
+
+Nests and holes belong to the room, so when the dungeon throws a room away they go with it. Nothing
+follows you down.
+
 ### Meeting a boss, and leaving one
 
 Neither boss is standing there waiting. You find the Dragon King **asleep** — the camera pushes in,
@@ -58,12 +131,21 @@ forge is exactly as you left it**, and your satchel comes with you across a page
 are not saved** — the things guarding a room come back, so a book you have already finished is still
 a book you can play.
 
+Book four saves one number instead: the deepest landing you reached. Nothing else in that book
+outlives the room it was in, let alone the book.
+
 The forge has to be in there. Lighting an ore takes it out of your satchel the moment you press the
 button, so a save that dropped the smelter destroyed that ore outright — and book one hands you
 exactly three, which is exactly one sword. Losing one meant the sword could never be made.
 
 Press **R** to erase everything. It asks first.
 `game.wipeSave()` does the same from the console; `game.unlockAll()` opens every written book.
+
+### No animated page flips
+
+Opening a book is a click, a short fade, and you are in. The 3D page sweep and the cover that swung
+itself open are both gone. What is left of the effect is the shelf itself — the books have spines and
+thickness and chains, and that is shape rather than animation.
 
 ### No popups
 
@@ -76,11 +158,11 @@ gone from the next book on the shelf.
 | Input | Action |
 |---|---|
 | `WASD` / arrows | Move |
-| `E` | Interact (shelf, smelter, chest, anvil) |
+| `E` | Interact (shelf, smelter, chest, anvil, merchant, portal) |
 | `Q` | Satchel (4×4) |
 | `Space` or `F` | Dash (i-frames, 0.75s cooldown) |
 | Scroll wheel / `1`–`4` | Switch hotbar slot |
-| Left click | Attack with the selected slot |
+| Left click | Attack with the selected slot — or **place it**, if it is a block |
 | Right click | Interact |
 | Left click *in inventory* | Move **one** item |
 | Right click *in inventory* | Move the **whole stack** |
@@ -101,7 +183,7 @@ does nothing, because bare hands deal zero damage.
 |---|---|
 | Player | 100 HP (10 hearts) |
 | Fists | **0 damage** — cannot hurt enemies, wood, or anything else |
-| Iron sword | 18 damage · 2 blocks reach · 0.36s cooldown |
+| Iron sword | 18 damage · 2 blocks reach · 0.36s cooldown (before any modifier) |
 | Wave gun | 9 on the cast, then 8 every 0.2–0.7s for 1.5s · 4-block cone · 2s cooldown |
 | Wooden gate | 72 HP → 4 sword hits |
 | Coral gate | 90 HP → 5 sword hits |
@@ -110,6 +192,10 @@ does nothing, because bare hands deal zero damage.
 | Siren I / II | 55 HP / 100 HP (tier II has 3 armour) |
 | Dragon King · Drowned Queen | 300 HP each, phase 2 at 150 |
 | Fireballs and bubbles | destructible — **2 sword swings** or **5 bare-handed** |
+| Zombie Crawler | 26 HP · 7 damage · drops 1–3 coins about 60% of the time |
+| Black hole | 7 damage every 0.35s inside ~4 blocks · lives 3s · one per nest per 5s |
+| Critical hit | ×1.75, one roll per swing |
+| Dungeon cap | 25 enemies alive; past that the surplus becomes HP and damage |
 | Boss wake / collapse | ~3.5s and ~2.5s, player locked out for both |
 | Dash | ~60px burst, i-frames while dashing, 0.75s cooldown |
 
@@ -161,12 +247,12 @@ js/
   main.js          boot, game loop, combat glue, adaptive resolution
   engine/          canvas · postfx · sprite · input · camera · particles
                    audio (synthesised sfx) · music (streamed tracks)
-  data/            palette · sprites (all pixel art) · items · rooms
-  world/           tilemap · collision · room
+  data/            palette · sprites (all pixel art) · items · rooms · modifiers
+  world/           tilemap · collision · room · dungeon (book four's generator)
   entities/        player · servant · dragonking · drowned · drownedqueen
-                   projectile · wave · gate · props
+                   crawler · blackhole · projectile · wave · gate · props
   systems/         inventory · smelting · save
-  ui/              hud · inventoryUI · craftUI · shelfUI · icons
+  ui/              hud · inventoryUI · craftUI · shopUI · shelfUI · icons
 ```
 
 Sound effects are synthesised at runtime with WebAudio — oscillators and filtered noise bursts, no
@@ -194,7 +280,13 @@ with nearest-neighbour keeps the pixel grid exact where scaling the output would
 pass that samples the scene shares that one rect, bloom and chromatic aberration included, or the
 glow drifts off the thing that is glowing.
 
-Room layout is guarded by a flood fill rather than by eye. For every room it asserts that the
-forward exit is **unreachable** while its gate is shut, reachable once it opens, and that the way
-back out is always reachable — with props included in the fill. Both progression-blocking bugs this
-project has had were solid props sitting where nothing was checking for them.
+Room layout is guarded by a flood fill rather than by eye. For every hand-authored room it asserts
+that the forward exit is **unreachable** while its gate is shut, reachable once it opens, and that
+the way back out is always reachable — with props included in the fill. Both progression-blocking
+bugs this project has had were solid props sitting where nothing was checking for them.
+
+Book four runs that same fill **inside the generator**, before a room is ever handed back: a layout
+whose exit cannot be reached is thrown away and reseeded. It has to, because a book with no way back
+turns one unlucky pillar into a run you cannot finish and cannot leave. The test walks twenty-six
+generated rooms on real key presses rather than teleporting to the doorway — a teleport proves the
+transition works and proves nothing at all about whether a body can get there.

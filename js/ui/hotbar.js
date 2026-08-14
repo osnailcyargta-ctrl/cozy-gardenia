@@ -6,6 +6,7 @@
 
 import { iconCanvas } from './icons.js';
 import { ITEM_DEFS } from '../data/items.js';
+import { displayName, modColour } from '../data/modifiers.js';
 import { sfx } from '../engine/audio.js';
 
 export const HOTBAR_SLOTS = 4;
@@ -62,11 +63,11 @@ export function selectedItem() {
 }
 
 /** Put an item into the first free hotbar slot; returns true if it landed there. */
-export function placeInHotbar(id, count = 1) {
+export function placeInHotbar(id, count = 1, mod = undefined) {
   const inv = game.inventory;
   for (let i = 0; i < HOTBAR_SLOTS; i++) {
     if (!inv.slots[i]) {
-      inv.slots[i] = { id, count };
+      inv.slots[i] = mod ? { id, count, mod } : { id, count };
       select(i);
       refresh();
       return true;
@@ -77,7 +78,8 @@ export function placeInHotbar(id, count = 1) {
 
 function showName() {
   const s = selectedItem();
-  nameEl.textContent = s ? (ITEM_DEFS[s.id]?.name || s.id) : '';
+  nameEl.textContent = s ? displayName(ITEM_DEFS[s.id]?.name || s.id, s.mod) : '';
+  nameEl.style.color = (s && modColour(s.mod)) || '';
   nameEl.classList.toggle('show', !!s);
   nameTimer = 1.6;
 }
@@ -96,6 +98,8 @@ export function refresh() {
     const s = inv.slots[i];
     el.classList.toggle('sel', i === selected);
     el.classList.toggle('filled', !!s);
+    el.style.setProperty('--mod', (s && modColour(s.mod)) || 'transparent');
+    el.classList.toggle('modded', !!(s && s.mod));
     const box = el.querySelector('.hb-item');
     box.innerHTML = '';
     if (!s) return;

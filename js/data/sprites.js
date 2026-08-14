@@ -1455,6 +1455,221 @@ export const QUEEN = {
 };
 
 /* ============================================================
+   ZOMBIE CRAWLER (16x16) — a corpse hauling itself along on splayed
+   limbs, belly up, head thrown back. Rotting green with bone showing
+   and two red eyes: the only warm thing on it
+   ============================================================ */
+
+export const CRAWLER = {
+  idle: [
+    [
+      '................',
+      '................',
+      '....KJJJJK......',
+      '...KJDDDDJK.....',
+      '...KJIDDIJK.....',
+      '...KJJJJJJK.....',
+      '...KJFJJFJK.....',
+      '...KXJJJJXK.....',
+      '..KKXYZYZYXKK...',
+      '.KXYIYIYIYIYXK..',
+      '.KXZYIYIYIYZXK..',
+      'KXYYXKKKKKXYYXK.',
+      'KYXK.......KXYK.',
+      'KXK.........KXK.',
+      'KK...........KK.',
+      '................',
+    ],
+    [
+      '................',
+      '................',
+      '................',
+      '....KJJJJK......',
+      '...KJDDDDJK.....',
+      '...KJIDDIJK.....',
+      '...KJJJJJJK.....',
+      '...KJFJJFJK.....',
+      '...KXJJJJXK.....',
+      '..KKXYZYZYXKK...',
+      '.KXYIYIYIYIYXK..',
+      '.KXZYIYIYIYZXK..',
+      'KXYYXKKKKKXYYXK.',
+      'KYXK.......KXYK.',
+      'KXK.........KXK.',
+      'KK...........KK.',
+    ],
+  ],
+  run: [
+    [
+      '................',
+      '................',
+      '....KJJJJK......',
+      '...KJDDDDJK.....',
+      '...KJIDDIJK.....',
+      '...KJJJJJJK.....',
+      '...KJFJJFJK.....',
+      '...KXJJJJXK.....',
+      '..KKXYZYZYXKK...',
+      '.KXYIYIYIYIYXK..',
+      '.KXZYIYIYIYZXK..',
+      'KXYYXKKKKKXYYXK.',
+      'KYXKK.....KKXYK.',
+      'KXK.KK...KK..KXK',
+      'KK...KK.KK....KK',
+      '................',
+    ],
+    [
+      '................',
+      '................',
+      '................',
+      '....KJJJJK......',
+      '...KJDDDDJK.....',
+      '...KJIDDIJK.....',
+      '...KJJJJJJK.....',
+      '...KJFJJFJK.....',
+      '...KXJJJJXK.....',
+      '..KKXYZYZYXKK...',
+      '.KXYIYIYIYIYXK..',
+      '.KXZYIYIYIYZXK..',
+      'KXYYXKKKKKXYYXK.',
+      'KYXK.......KXYK.',
+      '.KXK.......KXK..',
+      '..KK.......KK...',
+    ],
+    [
+      '................',
+      '................',
+      '....KJJJJK......',
+      '...KJDDDDJK.....',
+      '...KJIDDIJK.....',
+      '...KJJJJJJK.....',
+      '...KJFJJFJK.....',
+      '...KXJJJJXK.....',
+      '..KKXYZYZYXKK...',
+      '.KXYIYIYIYIYXK..',
+      '.KXZYIYIYIYZXK..',
+      'KXYYXKKKKKXYYXK.',
+      'KKXYK.....KYXKK.',
+      'KK.KXK...KXK..KK',
+      '....KK...KK.....',
+      '................',
+    ],
+  ],
+  attack: [
+    [
+      '................',
+      '....KJJJJK......',
+      '...KJDDDDJK.....',
+      '...KDFFFFDK.....',
+      '...KJIDDIJK.....',
+      '...KJFJJFJK.....',
+      '...KXJJJJXK.....',
+      '..KKXYZYZYXKK...',
+      '.KXYIYIYIYIYXK..',
+      '.KXZYIYIYIYZXK..',
+      'KXYYXKKKKKXYYXK.',
+      'KYXKK.....KKXYK.',
+      'KXK.KK...KK..KXK',
+      'KK...KK.KK....KK',
+      '................',
+      '................',
+    ],
+  ],
+  hurt: [
+    [
+      '................',
+      '................',
+      '....KIIIIK......',
+      '...KIRRRRIK.....',
+      '...KIRRRRIK.....',
+      '...KIIIIIIK.....',
+      '...KIRIIRIK.....',
+      '...KJIIIIJK.....',
+      '..KKJIRIRIJKK...',
+      '.KJIRIRIRIRIJK..',
+      '.KJRIRIRIRIRJK..',
+      'KJIIJKKKKKJIIJK.',
+      'KIJK.......KJIK.',
+      'KJK.........KJK.',
+      'KK...........KK.',
+      '................',
+    ],
+  ],
+};
+
+/* ============================================================
+   MERCHANT (16x16) — hooded, carrying the lantern he is lit by
+   ============================================================ */
+
+export const MERCHANT = {
+  idle: [
+    [
+      '................',
+      '......KKKK......',
+      '.....KAzzAK.....',
+      '....KAz11zAK....',
+      '....KAz11zAK....',
+      '....KAm11mAK....',
+      '...KKAzzzzAKK...',
+      '.KKKAzABBAzAK...',
+      'KlmlKzABBBAzK...',
+      'KmnmKzAABBAzK...',
+      'KlmlKzAABAAzK...',
+      '.KkK.KzAABAzK...',
+      '.....KzAABAzK...',
+      '....KzAAABAAzK..',
+      '....KKKKKKKKKK..',
+      '................',
+    ],
+    [
+      '................',
+      '......KKKK......',
+      '.....KAzzAK.....',
+      '....KAz11zAK....',
+      '....KAz11zAK....',
+      '....KAm11mAK....',
+      '...KKAzzzzAKK...',
+      '...KAzABBAzAK...',
+      '.KKKKzABBBAzK...',
+      'KlmlKzAABBAzK...',
+      'KmnmKzAABAAzK...',
+      'Klml.KzAABAzK...',
+      '.....KzAABAzK...',
+      '....KzAAABAAzK..',
+      '....KKKKKKKKKK..',
+      '................',
+    ],
+  ],
+};
+
+/* ============================================================
+   BLACKHOLIAN'S NEST (16x16) — the placed block
+   ============================================================ */
+
+export const NEST = {
+  block: [
+    [
+      '................',
+      '................',
+      '......KKKK......',
+      '....KKzAAzKK....',
+      '...KzABCCBAzK...',
+      '..KzABCKKCBAzK..',
+      '..KABCKBBKCBAK..',
+      '..KACKBCCBKCAK..',
+      '..KACKBCCBKCAK..',
+      '..KABCKBBKCBAK..',
+      '..KzABCKKCBAzK..',
+      '...KzABCCBAzK...',
+      '....KKzAAzKK....',
+      '.....KKKKKK.....',
+      '................',
+      '................',
+    ],
+  ],
+};
+
+/* ============================================================
    BLOCKS (16x16 unless noted)
    ============================================================ */
 
@@ -1949,6 +2164,22 @@ export const ITEMS = {
       '....UUU.....',
       '....UU......',
       '....UUU.....',
+      '............',
+    ],
+  ],
+  blackholian_nest: [
+    [
+      '............',
+      '....KKKK....',
+      '..KKzAAzKK..',
+      '.KzABCCBAzK.',
+      '.KABCKKCBAK.',
+      '.KACKBBKCAK.',
+      '.KACKBBKCAK.',
+      '.KABCKKCBAK.',
+      '.KzABCCBAzK.',
+      '..KKzAAzKK..',
+      '....KKKK....',
       '............',
     ],
   ],

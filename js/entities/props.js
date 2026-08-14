@@ -2,7 +2,7 @@
 // decorative ones just draw and emit light.
 
 import { decode, draw } from '../engine/sprite.js';
-import { BLOCKS } from '../data/sprites.js';
+import { BLOCKS, MERCHANT, NEST } from '../data/sprites.js';
 import { addLight } from '../engine/postfx.js';
 import * as P from '../engine/particles.js';
 import { Container } from '../systems/inventory.js';
@@ -20,6 +20,9 @@ const S = {
   coral: decode(BLOCKS.coral[0], 'coral'),
   kelp0: decode(BLOCKS.kelp[0], 'kelp0'),
   kelp1: decode(BLOCKS.kelp[1], 'kelp1'),
+  merchant0: decode(MERCHANT.idle[0], 'merchant0'),
+  merchant1: decode(MERCHANT.idle[1], 'merchant1'),
+  nest: decode(NEST.block[0], 'nestBlock'),
 };
 
 export class Prop {
@@ -41,6 +44,10 @@ export class Prop {
       // kelp is scenery you walk straight through — a reef that blocks
       // movement turns the room into a maze nobody asked for
       kelp:      [0, 0,  false, null],
+      merchant:  [7, 7,  true,  'Merchant'],
+      // The portal is walked into, not walked around — it is the only way out
+      // of the dungeon and it must never be something you can get stuck behind.
+      portal:    [0, 0,  false, 'Portal'],
     }[type] || [8, 8, true, null];
 
     this.hw = box[0];
@@ -67,7 +74,7 @@ export class Prop {
     // Interaction reach, measured to the prop's box. Generous on purpose: with
     // no on-screen prompt telling you when you are in range, a tight radius
     // reads as "E is broken" rather than "stand closer".
-    this.reach = type === 'shelf' ? 34 : 26;
+    this.reach = type === 'shelf' ? 34 : (type === 'portal' ? 30 : 26);
   }
 
   update(dt, room) {
@@ -106,6 +113,29 @@ export class Prop {
       });
     }
 
+    if (this.type === 'portal') {
+      // motes falling inward, so the way out reads as a way through
+      if (Math.random() > 0.5) {
+        const a = Math.random() * Math.PI * 2;
+        const r = 20 + Math.random() * 16;
+        P.spawn({
+          x: this.x + Math.cos(a) * r, y: this.y + Math.sin(a) * r * 0.6,
+          vx: -Math.cos(a) * 44, vy: -Math.sin(a) * 30,
+          life: 0.5, size: 2, colour: Math.random() > 0.5 ? '#a866e0' : '#ddb4ff',
+          drag: 0.95, glow: 10, glowColour: 'rgba(168,102,224,ALPHA)',
+        });
+      }
+    }
+
+    if (this.type === 'merchant' && Math.random() > 0.94) {
+      P.spawn({
+        x: this.x - 6, y: this.y + 1,
+        vx: 0, vy: -10 - Math.random() * 8,
+        life: 0.8, size: 1, colour: '#f0cc5a', drag: 0.97,
+        glow: 6, glowColour: 'rgba(240,204,90,ALPHA)',
+      });
+    }
+
     if (this.type === 'smelter' && room?.smelter?.burning) {
       if (Math.random() > 0.7) {
         P.spawn({
@@ -131,11 +161,15 @@ export class Prop {
       case 'coral':   return S.coral;
       case 'kelp':    return Math.floor(this.t * 1.6) % 2 ? S.kelp1 : S.kelp0;
       case 'torch':   return Math.floor(this.t * 6.5) % 2 ? S.torch1 : S.torch0;
+      case 'merchant': return Math.floor(this.t * 1.4) % 2 ? S.merchant1 : S.merchant0;
+      case 'nest':    return S.nest;
     }
     return S.anvil;
   }
 
   draw(ctx, room) {
+    if (this.type === 'portal') { this.drawPortal(ctx); return; }
+
     const spr = this.sprite(room);
 
     if (this.type !== 'torch' && this.type !== 'kelp') {
@@ -164,6 +198,74 @@ export class Prop {
         ctx.restore();
       }
     }
+  }
+
+  /**
+   * The way home. Drawn rather than spritetd: a ring of turning light reads as
+   * a hole in the world in a way a 16x16 tile of purple never would.
+   */
+  drawPortal(ctx) {
+    const t = this.t;
+    const x = this.x, y = this.y;
+
+    // A hole in the floor first, drawn flat and dark. Without it the rings had
+    // nothing to sit against and the whole thing read as a hoop lying about on
+    // the ground rather than somewhere you could fall through.
+    ctx.save();
+    const pit = ctx.createRadialGradient(x, y, 1, x, y, 18);
+    pit.addColorStop(0, 'rgba(6,3,14,0.92)');
+    pit.addColorStop(0.62, 'rgba(14,7,28,0.72)');
+    pit.addColorStop(1, 'rgba(20,10,38,0)');
+    ctx.fillStyle = pit;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 18, 11, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+
+    // the mouth
+    // Kept well under white: bloom runs after this, and a full-strength core
+    // came back as a featureless blob with the rings burned out of it.
+    const g = ctx.createRadialGradient(x, y, 1, x, y, 20);
+    g.addColorStop(0, 'rgba(186,150,235,0.55)');
+    g.addColorStop(0.45, 'rgba(120,66,190,0.34)');
+    g.addColorStop(1, 'rgba(60,30,110,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 20, 13, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // three rings, each turning at its own rate
+    for (let i = 0; i < 3; i++) {
+      const spin = t * (0.9 + i * 0.5) + i * 1.1;
+      const rx = 9 + i * 4.5 + Math.sin(t * 2 + i) * 0.8;
+      ctx.strokeStyle = `rgba(${[221, 190, 150][i]},${[180, 130, 90][i]},255,${0.75 - i * 0.18})`;
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(x, y, rx, rx * 0.42, spin, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // a bright lip around the opening, so the edge is somewhere definite
+    ctx.strokeStyle = 'rgba(238,214,255,0.5)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(x, y, 17, 10, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // motes climbing out of it — on sines rather than Math.random(), which at
+    // 60Hz is a strobe rather than a drift
+    for (let i = 0; i < 7; i++) {
+      const k = (t * 0.42 + i / 7) % 1;
+      const a = i * 2.39 + t * 0.5;
+      const mx = x + Math.cos(a) * (13 - k * 7);
+      const my = y - k * 26 + Math.sin(a * 2) * 1.5;
+      ctx.fillStyle = `rgba(221,180,255,${(1 - k) * 0.75})`;
+      ctx.fillRect(Math.round(mx), Math.round(my), 1, 1 + (i % 2));
+    }
+    ctx.restore();
   }
 
   drawLight(ctx, room) {
@@ -205,6 +307,19 @@ export class Prop {
         break;
       case 'anvil':
         addLight(ctx, this.x, this.y, 38, 'rgba(170,190,220,ALPHA)', 0.34);
+        break;
+      case 'portal': {
+        const b = 0.7 + Math.sin(this.t * 2.3) * 0.1;
+        addLight(ctx, this.x, this.y, 120 * b, 'rgba(150,92,215,ALPHA)', b * 0.8);
+        break;
+      }
+      case 'merchant':
+        // the lantern is his light; the robe only catches a little of it
+        addLight(ctx, this.x - 6, this.y + 1, 74, 'rgba(255,186,86,ALPHA)', 0.8);
+        addLight(ctx, this.x + 2, this.y - 2, 24, 'rgba(190,140,235,ALPHA)', 0.22);
+        break;
+      case 'nest':
+        addLight(ctx, this.x, this.y, 44, 'rgba(168,102,224,ALPHA)', 0.55);
         break;
     }
   }

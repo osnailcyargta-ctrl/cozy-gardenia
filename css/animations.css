@@ -60,9 +60,6 @@
   100% { transform: scaleX(1); }
 }
 
-@keyframes page-sweep {
-  0%   { transform: perspective(1400px) rotateY(-98deg); opacity: 0.15; }
-  46%  { transform: perspective(1400px) rotateY(0deg);   opacity: 1; }
   62%  { transform: perspective(1400px) rotateY(0deg);   opacity: 1; }
   100% { transform: perspective(1400px) rotateY(96deg);  opacity: 0.1; }
 }

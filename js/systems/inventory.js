@@ -21,13 +21,17 @@ export class Container {
 
   has(id, n = 1) { return this.count(id) >= n; }
 
-  /** Add items, filling partial stacks first. Returns the leftover that didn't fit. */
-  add(id, count = 1) {
+  /**
+   * Add items, filling partial stacks first. Returns the leftover that didn't
+   * fit. A modifier is part of the item's identity — a Heavy sword must never
+   * merge into a stack of plain ones.
+   */
+  add(id, count = 1, mod = undefined) {
     let left = count;
     const cap = maxStack(id);
     for (const s of this.slots) {
       if (left <= 0) break;
-      if (s && s.id === id && s.count < cap) {
+      if (s && s.id === id && s.mod === mod && s.count < cap) {
         const room = cap - s.count;
         const take = Math.min(room, left);
         s.count += take;
@@ -37,7 +41,7 @@ export class Container {
     for (let i = 0; i < this.size && left > 0; i++) {
       if (!this.slots[i]) {
         const take = Math.min(cap, left);
-        this.slots[i] = { id, count: take };
+        this.slots[i] = mod ? { id, count: take, mod } : { id, count: take };
         left -= take;
       }
     }
@@ -83,13 +87,13 @@ export function transfer(fromC, fromI, toC, toI, amount) {
 
   if (!dst) {
     const take = Math.min(n, cap);
-    toC.slots[toI] = { id: src.id, count: take };
+    toC.slots[toI] = src.mod ? { id: src.id, count: take, mod: src.mod } : { id: src.id, count: take };
     src.count -= take;
     if (src.count <= 0) fromC.slots[fromI] = null;
     return true;
   }
 
-  if (dst.id === src.id) {
+  if (dst.id === src.id && dst.mod === src.mod) {
     const room = cap - dst.count;
     if (room <= 0) return false;
     const take = Math.min(room, n);

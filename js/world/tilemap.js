@@ -74,7 +74,51 @@ export class TileMap {
     const px = tx * TILE, py = ty * TILE;
     const wood = this.floorStyle === 'wood';
     const water = this.floorStyle === 'water';
+    const crypt = this.floorStyle === 'crypt';
     const n = hash(tx, ty, 1);
+
+    if (crypt) {
+      // Cracked slabs over something older. Same narrow shade spread as the
+      // other floors — the detail comes from the cracks and the litter, not
+      // from making every tile a different colour.
+      const shades = ['#231d2d', '#1f1a28', '#261f31', '#1c1724'];
+      x.fillStyle = shades[((tx * 7 + ty * 13) >>> 0) % 4];
+      x.fillRect(px, py, TILE, TILE);
+
+      x.fillStyle = 'rgba(0,0,0,0.5)';
+      x.fillRect(px, py + TILE - 1, TILE, 1);
+      x.fillRect(px + TILE - 1, py, 1, TILE);
+      x.fillStyle = 'rgba(150,130,180,0.07)';
+      x.fillRect(px, py, TILE - 1, 1);
+
+      // a crack that wanders across the slab, on a quarter of them
+      if (n > 0.75) {
+        x.fillStyle = 'rgba(0,0,0,0.45)';
+        let cx = px + 2 + ((hash(tx, ty, 4) * 11) | 0);
+        let cy = py + 1;
+        for (let i = 0; i < 6 + ((n * 6) | 0); i++) {
+          x.fillRect(cx, cy, 1, 1);
+          cx += (hash(tx + i, ty, 9) > 0.5 ? 1 : -1);
+          cy += 2;
+          if (cy > py + TILE - 1) break;
+        }
+      }
+      // Bone chips and old stains, and both stay RARE. At one tile in ten the
+      // litter stopped reading as litter and turned the floor into confetti.
+      if (n < 0.03) {
+        const bx = px + 4 + (((n * 400) | 0) % 6);
+        x.fillStyle = 'rgba(216,203,168,0.32)';
+        x.fillRect(bx, py + 8, 3, 1);
+        x.fillStyle = 'rgba(216,203,168,0.2)';
+        x.fillRect(bx - 1, py + 9, 1, 1);
+        x.fillRect(bx + 3, py + 7, 1, 1);
+      } else if (n > 0.965) {
+        x.fillStyle = 'rgba(74,15,24,0.35)';
+        x.fillRect(px + 3, py + 4, 6, 4);
+        x.fillRect(px + 5, py + 8, 3, 2);
+      }
+      return;
+    }
 
     if (water) {
       // Flooded flagstones. The stone stays readable underneath — a flat sheet
@@ -158,6 +202,7 @@ export class TileMap {
     const openBelow = !this.solidAt(tx, ty + 1);
     const n = hash(tx, ty, 2);
     const wet = this.floorStyle === 'water';
+    const crypt = this.floorStyle === 'crypt';
 
     // Base block, deliberately far darker than the floor. Without a clear
     // value gap between wall and floor the room has no readable architecture —
@@ -194,9 +239,9 @@ export class TileMap {
     // sells the wall as a vertical surface rather than a dark floor tile. The
     // per-tile jitter keeps it from looking like a ruled line.
     if (openBelow) {
-      x.fillStyle = wet ? '#1c4351' : '#3b3050';
+      x.fillStyle = wet ? '#1c4351' : (crypt ? '#332845' : '#3b3050');
       x.fillRect(px, py + TILE - 3, TILE, 3);
-      x.fillStyle = wet ? '#2d6879' : '#5b4a76';
+      x.fillStyle = wet ? '#2d6879' : (crypt ? '#584573' : '#5b4a76');
       x.fillRect(px, py + TILE - 3, TILE, 1);
       if (n > 0.45) {
         x.fillStyle = wet ? 'rgba(112,218,212,0.42)' : 'rgba(140,118,175,0.5)';
@@ -207,6 +252,24 @@ export class TileMap {
         x.fillStyle = 'rgba(44,86,56,0.35)';
         x.fillRect(px + ((n * 9) | 0), py + TILE - 1, 5, 1);
       }
+    }
+
+    // Rims on every other side that touches open floor. The border walls only
+    // ever show their bottom edge, so the lip alone was enough for them — but a
+    // free-standing pillar shows all four, and with only the bottom one lit it
+    // read as a ledge painted on the floor rather than a block standing on it.
+    const edge = wet ? 'rgba(112,218,212,' : 'rgba(150,126,188,';
+    if (!this.solidAt(tx, ty - 1)) {
+      x.fillStyle = edge + '0.3)';
+      x.fillRect(px, py, TILE, 1);
+    }
+    if (!this.solidAt(tx - 1, ty)) {
+      x.fillStyle = edge + '0.22)';
+      x.fillRect(px, py, 1, TILE);
+    }
+    if (!this.solidAt(tx + 1, ty)) {
+      x.fillStyle = edge + '0.22)';
+      x.fillRect(px + TILE - 1, py, 1, TILE);
     }
   }
 }

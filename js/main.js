@@ -10,8 +10,10 @@ import * as music from './engine/music.js';
 
 import { LIBRARY, BOOKS } from './data/rooms.js';
 import { FIST, ITEM_DEFS } from './data/items.js';
+import { applyMod, CRIT_MULT } from './data/modifiers.js';
 
 import { Room } from './world/room.js';
+import * as dungeon from './world/dungeon.js';
 import { inArc } from './world/collision.js';
 import { Player } from './entities/player.js';
 import { WaveField } from './entities/wave.js';
@@ -25,6 +27,7 @@ import * as invUI from './ui/inventoryUI.js';
 import * as craftUI from './ui/craftUI.js';
 import * as shelfUI from './ui/shelfUI.js';
 import * as hotbar from './ui/hotbar.js';
+import * as shopUI from './ui/shopUI.js';
 
 /* ============================================================
    Game state
@@ -40,6 +43,10 @@ const game = {
   smelter: new Smelter(),
   bookIndex: 0,
   bookDefeated: false,
+  // book four only: how deep this run is, and the deepest landing reached
+  depth: 0,
+  milestone: 0,
+  runSeed: 1,
   cleared: save.cleared(),
   paused: false,
   time: 0,
@@ -51,7 +58,7 @@ const game = {
   onBossDefeated,
   // console escape hatches
   unlockAll: () => {
-    BOOKS.forEach((b, i) => { if (b.rooms) { game.cleared.add(i); save.markCleared(i); } });
+    BOOKS.forEach((b, i) => { if (b.rooms || b.infinite) { game.cleared.add(i); save.markCleared(i); } });
     shelfUI.refresh();
   },
   wipeSave: () => { save.wipe(); game.cleared = new Set(); shelfUI.refresh(); },
@@ -73,6 +80,7 @@ invUI.init(game);
 craftUI.init(game);
 shelfUI.init(game);
 hotbar.init(game);
+shopUI.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
@@ -123,8 +131,11 @@ function goToLibrary() {
   hud.setPrompt(null);
   // Leaving a book is the moment the player thinks of as "done for now", so it
   // is the moment the world is written down.
-  if (game.scene === 'book' && game.rooms.length) {
-    save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex(), game.smelter);
+  if (game.scene === 'book') {
+    if (inDungeon()) save.saveDungeon(game.bookIndex, game.milestone, game.inventory, hotbar.selectedIndex());
+    else if (game.rooms.length) {
+      save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex(), game.smelter);
+    }
   }
   if (game.player) { game.player.speedMul = 1; game.player.frozen = false; }
   game.scene = 'library';
@@ -154,13 +165,19 @@ function goToLibrary() {
 
 function enterBook(index) {
   const book = BOOKS[index];
-  if (!book || !book.rooms || locked(index)) return;
+  if (!book || (!book.rooms && !book.infinite) || locked(index)) return;
+
+  game.bookIndex = index;
+  game.bookDefeated = false;
+
+  if (book.infinite) {
+    enterDungeon(index);
+    return;
+  }
 
   // fresh run: rebuild rooms and the forge. Chests carry their own contents.
   game.rooms = book.rooms.map((def) => new Room(def));
   game.roomIndex = 0;
-  game.bookIndex = index;
-  game.bookDefeated = false;
 
   // Gates you broke stay broken, chests you emptied stay empty, and the forge
   // is exactly as you left it. Only a book you have never opened gets a cold
@@ -171,6 +188,73 @@ function enterBook(index) {
   music.play('rush');
   loadRoom(0, 'forward');
 }
+
+/* ============================================================
+   Book four: rooms that do not exist until you reach them
+   ============================================================ */
+
+/**
+ * `game.rooms` is a Map here, not an array — an endless book cannot build its
+ * floors up front, and anything behind you is unreachable anyway, so it is
+ * released rather than kept.
+ */
+function enterDungeon(index) {
+  game.rooms = new Map();
+  game.milestone = save.deepest(index);
+  game.runSeed = (Math.random() * 0xffffffff) >>> 0;
+  game.smelter.reset();
+  game.scene = 'book';
+  music.play('rush');
+  // You always land on the last checkpoint you reached; a fresh run starts at 1.
+  loadDepth(Math.max(1, game.milestone));
+}
+
+function dungeonRoom(depth) {
+  let room = game.rooms.get(depth);
+  if (!room) {
+    room = new Room(dungeon.makeRoom(game.runSeed, depth));
+    game.rooms.set(depth, room);
+  }
+  return room;
+}
+
+/** Forget everything except the floor you are standing on. */
+function releaseRooms(keep) {
+  for (const d of [...game.rooms.keys()]) if (d !== keep) game.rooms.delete(d);
+}
+
+function loadDepth(depth) {
+  const room = dungeonRoom(depth);
+  releaseRooms(depth);
+
+  game.depth = depth;
+  game.roomIndex = depth;
+  game.room = room;
+  room.smelter = game.smelter;
+
+  if (dungeon.isMilestone(depth) && depth > game.milestone) {
+    game.milestone = depth;
+    save.setDeepest(game.bookIndex, depth);
+  }
+
+  const at = room.def.spawn;
+  if (!game.player) game.player = new Player(at.x, at.y);
+  else { game.player.x = at.x; game.player.y = at.y; game.player.vx = game.player.vy = 0; }
+  game.player.knockX = game.player.knockY = 0;
+  game.player.invuln = 0.8;
+  game.player.frozen = false;
+  room._player = game.player;
+
+  hud.setRoom(room.def.name);
+  hud.setHearts(game.player.hp, game.player.maxHp);
+  bossBarUp = false;
+  hud.hideBoss();
+  P.clear();
+  cam.reset();
+  flashFromBlack();
+}
+
+const inDungeon = () => game.scene === 'book' && BOOKS[game.bookIndex]?.infinite;
 
 function loadRoom(index, dir) {
   game.roomIndex = index;
@@ -221,6 +305,15 @@ function tryRoomTransition() {
   if (!exit) return;
 
   const def = game.room.def;
+
+  // The dungeon only ever goes deeper.
+  if (inDungeon()) {
+    if (exit !== 'E') return;
+    transitioning = true;
+    fadeThen(() => { loadDepth(game.depth + 1); transitioning = false; });
+    return;
+  }
+
   if (exit === 'E' && def.exitTo !== null && def.exitTo !== undefined) {
     transitioning = true;
     fadeThen(() => { loadRoom(def.exitTo, 'forward'); transitioning = false; });
@@ -250,12 +343,14 @@ function fadeThen(fn) {
 
 function anyPopupOpen() {
   return invUI.isOpen() || craftUI.smelterOpen() || craftUI.anvilOpen() || shelfUI.isOpen()
+    || shopUI.isOpen()
     || !deathScreen.classList.contains('hidden')
     || !resetScreen.classList.contains('hidden');
 }
 
 function closeAllPopups() {
   closeReset();
+  shopUI.close();
   invUI.close();
   craftUI.closeSmelter();
   craftUI.closeAnvil();
@@ -286,6 +381,12 @@ function doInteract() {
       craftUI.openAnvil();
       sfx.uiBig();
       return true;
+    case 'merchant':
+      shopUI.open(prop);
+      return true;
+    case 'portal':
+      goToLibrary();
+      return true;
   }
   return false;
 }
@@ -295,6 +396,21 @@ function resolveSwing() {
   const room = game.room;
   const w = p.weapon;
   let hitAnything = false;
+
+  // Some things in your hand are not swung. Left click puts them down.
+  if (w.kind === 'place') return placeHeld();
+
+  // One roll per swing, not per target: a critical is a good hit, not a good
+  // frame, and rolling per enemy would make crowds crit constantly.
+  const crit = Math.random() < (w.crit || 0);
+  const dmg = crit ? Math.round(w.damage * CRIT_MULT) : w.damage;
+  if (crit && w.damage > 0) {
+    cam.shake(5, 0.22);
+    P.burst(p.x + Math.cos(p.attackAngle) * 14, p.y + Math.sin(p.attackAngle) * 14, 12, {
+      colour: '#fff2b0', speed: 130, life: 0.35, size: 2, drag: 0.88,
+      glow: 14, glowColour: 'rgba(255,242,176,ALPHA)',
+    });
+  }
 
   // The wave gun does not swing at anything: it plants a cone that then does
   // the work on its own clock. Only the opening hit is resolved here.
@@ -321,7 +437,7 @@ function resolveSwing() {
     if (e.dead) continue;
     if (e.invisible) continue;
     if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + (e.radius || 8), e.x, e.y)) {
-      e.hurt(w.damage, p.x, p.y);
+      e.hurt(dmg, p.x, p.y);
       hitAnything = true;
     }
   }
@@ -338,12 +454,32 @@ function resolveSwing() {
   const gate = room.gate;
   if (gate && !gate.open) {
     if (inArc(p.x, p.y, p.attackAngle, w.arc, w.range + 12, gate.x, gate.y)) {
-      gate.strike(w.damage, w, p.x, p.y);
+      gate.strike(dmg, w, p.x, p.y);
       hitAnything = true;
     }
   }
 
   return hitAnything;
+}
+
+/**
+ * Put the held block down where the cursor is, if that is close enough and the
+ * floor is clear. Costs one of them — a nest is spent by placing it.
+ */
+function placeHeld() {
+  const p = game.player;
+  const room = game.room;
+  const slot = game.inventory.slots[hotbar.selectedIndex()];
+  if (!slot || slot.id !== 'blackholian_nest') return false;
+
+  const tx = input.mouse.x, ty = input.mouse.y;
+  if (Math.hypot(tx - p.x, ty - p.y) > 48) { sfx.denied(); return false; }
+  if (room.map.solidPx(tx, ty)) { sfx.denied(); return false; }
+
+  room.addNest(tx, ty);
+  game.inventory.remove('blackholian_nest', 1);
+  refreshInventory();
+  return true;
 }
 
 /** Walk into a locked gate carrying a key -> it opens. */
@@ -362,7 +498,7 @@ function tryUnlockGate() {
 /** A book is sealed until the one it depends on has been finished. */
 function locked(index) {
   const b = BOOKS[index];
-  if (!b || !b.rooms) return true;
+  if (!b || (!b.rooms && !b.infinite)) return true;
   return b.needs !== undefined && !game.cleared.has(b.needs);
 }
 
@@ -375,7 +511,8 @@ function syncWeapon() {
   // Whatever sits in the selected hotbar slot is what you swing. No auto-equip:
   // holding coal means your swing does nothing, because fists deal 0.
   const held = game.inventory.slots[hotbar.selectedIndex()];
-  const w = (held && ITEM_DEFS[held.id]?.weapon) || FIST;
+  const base = (held && ITEM_DEFS[held.id]?.weapon) || FIST;
+  const w = applyMod(base, held?.mod);
   game.player.weapon = w;
   hotbar.refresh();
 }
@@ -385,6 +522,7 @@ function refreshInventory() {
   hotbar.refresh();
   craftUI.refreshSmelter();
   craftUI.refreshAnvil();
+  shopUI.refresh();
   syncWeapon();
 }
 
@@ -415,6 +553,15 @@ function respawn() {
   p.invuln = 1.2;
   p.knockX = p.knockY = 0;
   p.vx = p.vy = 0;
+
+  // The dungeon has no "this room again" — it has a checkpoint. Everything you
+  // are carrying comes with you; what you lose is the descent since the last
+  // landing.
+  if (inDungeon()) {
+    game.rooms.clear();
+    loadDepth(Math.max(1, game.milestone));
+    return;
+  }
 
   // restart the current room's fight from its entrance
   const room = game.rooms[game.roomIndex];

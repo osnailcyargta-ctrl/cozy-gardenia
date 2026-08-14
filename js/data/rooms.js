@@ -337,4 +337,8 @@ export const BOOKS = [
   { id: 0, title: 'Greedy Ass Dragon', rooms: BOOK1_ROOMS },
   { id: 1, title: 'Underwater Mommy', rooms: BOOK2_ROOMS, needs: 0 },
   { id: 2, title: '???', rooms: null },
+  // Book four has no rooms table because its rooms do not exist until you walk
+  // into them. `infinite` is what tells the rest of the game the difference
+  // between "not written yet" and "never ends".
+  { id: 3, title: 'Infinite Dungeon', rooms: null, infinite: true, needs: 0 },
 ];

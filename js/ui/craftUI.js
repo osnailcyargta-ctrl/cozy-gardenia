@@ -2,6 +2,7 @@
 
 import { iconCanvas } from './icons.js';
 import { ITEM_DEFS } from '../data/items.js';
+import { rollForge, rollReforge, displayName, modColour, REFORGE_COST, MODS } from '../data/modifiers.js';
 import { ORES_PER_COAL, SECONDS_PER_ORE } from '../systems/smelting.js';
 import { sfx } from '../engine/audio.js';
 import * as hotbar from './hotbar.js';
@@ -22,6 +23,7 @@ let game = null;
 export function init(g) {
   game = g;
   document.getElementById('forge-btn').addEventListener('click', onForge);
+  document.getElementById('reforge-btn').addEventListener('click', onReforge);
 }
 
 export function openSmelter() {
@@ -123,6 +125,12 @@ export function openAnvil() {
 export function closeAnvil() { aPopup.classList.add('hidden'); }
 export function anvilOpen() { return !aPopup.classList.contains('hidden'); }
 
+/** The weapon in the selected hotbar slot — the one reforging would gamble. */
+function heldWeapon() {
+  const s = game.inventory.slots[hotbar.selectedIndex()];
+  return s && ITEM_DEFS[s.id]?.weapon && ITEM_DEFS[s.id].weapon.kind !== 'place' ? s : null;
+}
+
 export function refreshAnvil() {
   if (!anvilOpen()) return;
   const inv = game.inventory;
@@ -147,6 +155,25 @@ export function refreshAnvil() {
     anvilMsg.textContent = 'You already carry one.';
     anvilMsg.className = '';
   }
+
+  // ---- reforge ----
+  const held = heldWeapon();
+  const coins = inv.count('gold_coin');
+  const reforgeBtn = document.getElementById('reforge-btn');
+  const info = document.getElementById('reforge-info');
+
+  reforgeBtn.disabled = !held || coins < REFORGE_COST;
+  reforgeBtn.textContent = `Reforge · ${REFORGE_COST}c`;
+
+  if (!held) {
+    info.textContent = 'Hold a weapon to reforge it.';
+    info.style.color = '';
+  } else {
+    const base = ITEM_DEFS[held.id];
+    const m = MODS[held.mod];
+    info.textContent = `${displayName(base.name, held.mod)}${m ? ' — ' + m.blurb : ' — no modifier'}  ·  ${coins}c in purse`;
+    info.style.color = modColour(held.mod) || '';
+  }
 }
 
 function onForge() {
@@ -165,11 +192,47 @@ function onForge() {
   }
 
   inv.remove('iron_bar', RECIPE.need.iron_bar);
+  // A fresh blade can come out plain or come out special, but never broken —
+  // you only ruin a weapon by gambling with one you already own.
+  const mod = rollForge();
   // Straight into the hotbar when there is room. With 0-damage fists, a sword
   // stranded in a lower row reads as a broken game rather than a misplaced item.
-  if (!hotbar.placeInHotbar('iron_sword', 1)) inv.add('iron_sword', 1);
-  anvilMsg.textContent = 'The blade is yours.';
+  if (!hotbar.placeInHotbar('iron_sword', 1, mod)) inv.add('iron_sword', 1, mod);
+  anvilMsg.textContent = mod
+    ? `The blade comes out ${MODS[mod].name.toLowerCase()}.`
+    : 'The blade is yours.';
   anvilMsg.className = 'ok';
+  anvilMsg.style.color = modColour(mod) || '';
+  sfx.forge();
+  game.refreshInventory();
+  refreshAnvil();
+}
+
+/**
+ * Re-roll the modifier on the weapon you are holding, for coin. It can come out
+ * plain, and it can come out broken — that is the whole bet.
+ */
+function onReforge() {
+  const inv = game.inventory;
+  const held = heldWeapon();
+  if (!held) { sfx.denied(); return; }
+  if (inv.count('gold_coin') < REFORGE_COST) {
+    anvilMsg.textContent = `Reforging costs ${REFORGE_COST} coins.`;
+    anvilMsg.className = 'err';
+    anvilMsg.style.color = '';
+    sfx.denied();
+    return;
+  }
+
+  inv.remove('gold_coin', REFORGE_COST);
+  const mod = rollReforge();
+  if (mod) held.mod = mod; else delete held.mod;
+
+  anvilMsg.textContent = mod
+    ? `It comes back ${MODS[mod].name.toLowerCase()}.`
+    : 'The metal settles plain.';
+  anvilMsg.className = mod === 'broken' ? 'err' : 'ok';
+  anvilMsg.style.color = modColour(mod) || '';
   sfx.forge();
   game.refreshInventory();
   refreshAnvil();

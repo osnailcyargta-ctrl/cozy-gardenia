@@ -298,3 +298,14 @@
 }
 #music-toast .mt-arrow { color: #6f5c8c; letter-spacing: 0; }
 #music-toast .mt-by { color: #a294bb; font-style: italic; }
+
+/* a modified weapon marks its hotbar slot in its own colour */
+.hb-slot.modded { border-color: var(--mod); }
+.hb-slot.modded::before {
+  content: "";
+  position: absolute; inset: -1px;
+  border-radius: 3px;
+  box-shadow: 0 0 12px var(--mod);
+  pointer-events: none;
+  opacity: 0.55;
+}

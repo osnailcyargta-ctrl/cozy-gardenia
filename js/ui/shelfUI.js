@@ -1,11 +1,10 @@
-// The bookshelf picker. Book one opens with a cover-swing and a page sweep;
-// the sealed pair only rattle their chains.
+// The bookshelf picker. Sealed books rattle their chains; an open one just
+// takes you in.
 
 import { sfx } from '../engine/audio.js';
 import { BOOKS } from '../data/rooms.js';
 
 const popup = document.getElementById('shelf-popup');
-const transition = document.getElementById('book-transition');
 let game = null;
 let busy = false;
 
@@ -28,7 +27,8 @@ export function init(g) {
 export function refresh() {
   popup.querySelectorAll('.book').forEach((el) => {
     const b = BOOKS[Number(el.dataset.book)];
-    const written = !!b?.rooms;
+    // An endless book has no rooms table but is very much written.
+    const written = !!(b?.rooms || b?.infinite);
     const sealed = !written || (b.needs !== undefined && !game?.cleared?.has(b.needs));
 
     el.classList.toggle('locked', sealed);
@@ -62,24 +62,8 @@ function onPick(el) {
 
   busy = true;
   sfx.bookOpen();
-  el.classList.add('opening');
-
-  setTimeout(() => {
-    transition.classList.remove('hidden');
-    const flip = transition.querySelector('.page-flip');
-    flip.style.animation = 'none';
-    void flip.offsetWidth;
-    flip.style.animation = '';
-
-    // swap the world at the midpoint of the page sweep, while the screen is covered
-    setTimeout(() => game.enterBook(idx), 480);
-    setTimeout(() => {
-      transition.classList.add('hidden');
-      close();
-      el.classList.remove('opening');
-      busy = false;
-    }, 1060);
-  }, 620);
+  // No page sweep, no cover swing: a short fade and you are in.
+  setTimeout(() => { game.enterBook(idx); close(); busy = false; }, 180);
 }
 
 export function open() {

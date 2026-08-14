@@ -6,6 +6,7 @@
 import { transfer } from '../systems/inventory.js';
 import { iconCanvas } from './icons.js';
 import { ITEM_DEFS } from '../data/items.js';
+import { displayName, modColour, MODS } from '../data/modifiers.js';
 import { sfx } from '../engine/audio.js';
 
 const invGrid = document.getElementById('inv-grid');
@@ -68,9 +69,14 @@ function showTip(container, index) {
   hideTip();
   if (!s) return;
   const d = ITEM_DEFS[s.id];
+  const colour = modColour(s.mod);
+  const m = MODS[s.mod];
   tipEl = document.createElement('div');
   tipEl.id = 'tip';
-  tipEl.innerHTML = `${d?.name || s.id}${s.count > 1 ? ` <span style="color:#7e6c92">×${s.count}</span>` : ''}` +
+  tipEl.innerHTML =
+    `<span${colour ? ` style="color:${colour}"` : ''}>${displayName(d?.name || s.id, s.mod)}</span>` +
+    (s.count > 1 ? ` <span style="color:#7e6c92">×${s.count}</span>` : '') +
+    (m ? `<span class="tip-sub" style="color:${colour}">${m.blurb}</span>` : '') +
     (d?.desc ? `<span class="tip-sub">${d.desc}</span>` : '');
   document.body.appendChild(tipEl);
 }
