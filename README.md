@@ -30,12 +30,12 @@ keeps for you, so arriving here without one is not possible.
 
 1. **The Shallows** — flooded stone, two drowned thralls, and a 90 HP coral gate.
 2. **The Coral Vault** — three sirens. They do not dash at you the way the dragon's servants do;
-   they **haul you in**, then spit water bolts. Both they and the thralls take their time between
-   attacks — the telegraph and the pull are unchanged, only the pause before the next one. The tier II carries the coral key. A chest in the
-   **top-right corner** holds the **wave gun**.
+   they **haul you in**, then spit water bolts. The tier II carries the coral key, and a chest in the
+   **top-right corner** holds the **wave gun**. Sirens and thralls both take their time between
+   attacks — the telegraph and the pull are unchanged, only the pause before the next one.
 3. **The Tide Throne** — the **Drowned Queen**, 600 HP across two phases. Phase one is walls of
    water sweeping the room with a single gap, homing bubbles, and whirlpools that drag you off your
-   footing. At 150 the room floods for good: you wade from then on and the tides come in pairs.
+   footing. At 300 the room floods for good: you wade from then on and the tides come in pairs.
 
 Nothing here is hoarded and nothing drops coin. The queen is not greedy.
 
