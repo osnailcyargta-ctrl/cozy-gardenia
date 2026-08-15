@@ -48,9 +48,21 @@ export function setHearts(hp, maxHp) {
       heartsEl.appendChild(el);
       heartEls.push(el);
     }
+    lastHp = null;
+  } else if (hp === lastHp) {
+    // Nothing changed, so there is nothing to paint — and painting anyway would
+    // rewrite `className` and strip the flash class off a heart that is still
+    // mid-animation. This runs every frame; the flashes last a third of a
+    // second. Without this bail they were being cut off after one.
+    return;
   }
 
   const damaged = lastHp !== null && hp < lastHp;
+  // Healing gets its own flash. Three hearts arriving behind a room fade is
+  // otherwise completely invisible — the bar simply reads differently once the
+  // screen comes back, and nothing tells you it happened.
+  const healed = lastHp !== null && hp > lastHp;
+
   heartEls.forEach((el, i) => {
     const v = hp - i * perHeart;
     const kind = v >= perHeart ? 'full' : v >= perHeart / 2 ? 'half' : 'empty';
@@ -59,10 +71,17 @@ export function setHearts(hp, maxHp) {
       el.dataset.kind = kind;
       el.replaceChildren(heartCanvas(kind));
     }
+    // A hit flashes the hearts it emptied; a heal flashes the ones it filled.
+    // `void el.offsetWidth` forces the reflow that restarts the animation.
+    const wasV = lastHp - i * perHeart;
     if (damaged && v < perHeart) {
       el.classList.remove('pulse');
       void el.offsetWidth;
       el.classList.add('pulse');
+    } else if (healed && v > wasV && wasV < perHeart) {
+      el.classList.remove('mend');
+      void el.offsetWidth;
+      el.classList.add('mend');
     }
   });
   lastHp = hp;

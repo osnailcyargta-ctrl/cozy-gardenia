@@ -28,6 +28,7 @@
 .heart canvas { image-rendering: pixelated; width: 27px; height: 24px; }
 .heart.empty { filter: none; opacity: 0.8; }
 .heart.pulse { animation: heart-hit 0.35s ease; }
+.heart.mend { animation: heart-mend 0.55s ease; }
 
 /* ---------- room label ---------- */
 #room-label {

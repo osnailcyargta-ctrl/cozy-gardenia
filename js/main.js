@@ -259,6 +259,8 @@ function loadDepth(depth) {
   game.player.frozen = false;
   room._player = game.player;
 
+  const healed = healOnArrival(room);
+
   hud.setRoom(room.def.name);
   hud.setHearts(game.player.hp, game.player.maxHp);
   bossBarUp = false;
@@ -266,6 +268,7 @@ function loadDepth(depth) {
   P.clear();
   cam.reset();
   flashFromBlack();
+  if (healed) showHeal();
 }
 
 const inDungeon = () => game.scene === 'book' && BOOKS[game.bookIndex]?.infinite;
@@ -285,6 +288,8 @@ function loadRoom(index, dir) {
   game.player.invuln = 0.6;
   room._player = game.player;
 
+  const healed = healOnArrival(room);
+
   hud.setRoom(def.name);
   hud.setHearts(game.player.hp, game.player.maxHp);
 
@@ -294,6 +299,37 @@ function loadRoom(index, dir) {
   P.clear();
   cam.reset();
   flashFromBlack();
+  if (healed) showHeal();
+}
+
+/** Three hearts, in the HP the hearts are actually made of. */
+const ROOM_HEAL = 30;
+
+/**
+ * Somewhere you have never been is worth three hearts. Walking back through a
+ * door you already came through is not — otherwise the nearest doorway is a
+ * free health fountain you can pace in and out of.
+ *
+ * P.clear() runs right after this in both callers, so the burst is spawned by
+ * the caller rather than here.
+ */
+function healOnArrival(room) {
+  if (room.visited) return false;
+  room.visited = true;
+  const p = game.player;
+  if (!p || p.hp >= p.maxHp) return false;
+  p.heal(ROOM_HEAL);
+  return true;
+}
+
+/** The green flourish that says the three hearts happened. */
+function showHeal() {
+  sfx.heal();
+  const p = game.player;
+  P.burst(p.x, p.y - 2, 16, {
+    colour: '#8ff0b0', speed: 46, life: 0.75, size: 2, grav: -60, drag: 0.93,
+    glow: 10, glowColour: 'rgba(120,240,170,ALPHA)',
+  });
 }
 
 function flashFromBlack() {

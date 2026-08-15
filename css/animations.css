@@ -30,6 +30,14 @@
   100% { transform: scale(1); }
 }
 
+/* The inverse of heart-hit: softer, slower, and it glows green rather than
+   snapping. A hit should startle you; a heal should just be noticed. */
+@keyframes heart-mend {
+  0%   { transform: scale(1); filter: none; }
+  30%  { transform: scale(1.22); filter: drop-shadow(0 0 7px rgba(130, 245, 175, 0.9)); }
+  100% { transform: scale(1); filter: none; }
+}
+
 @keyframes title-glow {
   0%, 100% { text-shadow: 0 0 26px rgba(212,175,110,0.36), 0 0 60px rgba(150,80,190,0.22), 0 6px 0 #1a1220; }
   50%      { text-shadow: 0 0 40px rgba(232,195,130,0.55), 0 0 90px rgba(170,100,210,0.36), 0 6px 0 #1a1220; }

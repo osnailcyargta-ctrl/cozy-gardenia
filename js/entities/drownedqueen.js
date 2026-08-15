@@ -23,7 +23,10 @@ import { VW, VH, TILE } from '../engine/canvas.js';
 
 const Q = decodeSet(QUEEN, 'queen');
 
-const MAX_HP = 300;
+// Twice the king's original, and half again as much as his is now: she is the
+// deeper book's boss and the last thing written so far. The flood still starts
+// at half, because that threshold is MAX_HP / 2 rather than a number of its own.
+const MAX_HP = 600;
 const SCRIPT_1 = ['tide', 'volley', 'maelstrom', 'volley', 'tide', 'volley'];
 const SCRIPT_2 = ['volley', 'tide', 'maelstrom', 'tide', 'random'];
 

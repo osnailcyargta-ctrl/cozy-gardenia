@@ -22,7 +22,9 @@ import { VW, VH, TILE } from '../engine/canvas.js';
 const R = decodeSet(KING, 'king');
 const L = flipSet(R, 'kingL');
 
-const MAX_HP = 300;
+// Phase two is derived from this (MAX_HP / 2), so raising it moves the wings
+// breaking apart along with it — there is no second number to keep in step.
+const MAX_HP = 450;
 
 // The wake-up, in seconds: head down, head half up, then the roar.
 const WAKE = { sleep: 1.5, waking: 1, rise: 0.7 };

@@ -20,7 +20,7 @@ book, walking home does. The fourth has no end at all.
    the forge is not optional — it is the only way to become able to hurt something.
 2. **Hall of Coin** — three dragon's servants over piles of gold. Two tier I, one tier II that hits
    harder, dashes twice, and drops the key to the next gate.
-3. **The Hoard** — the **Dragon King**, 300 HP across two phases. At half health his wings tear
+3. **The Hoard** — the **Dragon King**, 450 HP across two phases. At half health his wings tear
    apart: no more dashing, but he starts vanishing and reappearing behind you.
 
 ### Book two — *Underwater Mommy*
@@ -30,9 +30,10 @@ keeps for you, so arriving here without one is not possible.
 
 1. **The Shallows** — flooded stone, two drowned thralls, and a 90 HP coral gate.
 2. **The Coral Vault** — three sirens. They do not dash at you the way the dragon's servants do;
-   they **haul you in**, then spit water bolts. The tier II carries the coral key. A chest in the
+   they **haul you in**, then spit water bolts. Both they and the thralls take their time between
+   attacks — the telegraph and the pull are unchanged, only the pause before the next one. The tier II carries the coral key. A chest in the
    **top-right corner** holds the **wave gun**.
-3. **The Tide Throne** — the **Drowned Queen**, 300 HP across two phases. Phase one is walls of
+3. **The Tide Throne** — the **Drowned Queen**, 600 HP across two phases. Phase one is walls of
    water sweeping the room with a single gap, homing bubbles, and whirlpools that drag you off your
    footing. At 150 the room floods for good: you wade from then on and the tides come in pairs.
 
@@ -132,6 +133,16 @@ is left of her is the crown, surfacing again.
 The player is locked out for the length of both cutscenes, and a book is not marked finished until
 the collapse has finished playing.
 
+### Getting your health back
+
+Somewhere you have never been is worth **three hearts**. Walking back through a door you already came
+through is not — otherwise the nearest doorway is a health fountain you can pace in and out of. In
+book four every room is new, so every room pays out; that is the only healing down there.
+
+The hearts flash green when they fill, the same way they flash when they empty. Both flashes used to
+be cut off after a single frame: `setHearts` runs every frame and rewrote `className`, stripping the
+animation class off a heart that was still mid-animation. It now bails when nothing changed.
+
 ### Saving
 
 Leaving a book writes it down: gates you broke stay broken, chests you emptied stay empty, **the
@@ -229,7 +240,11 @@ does nothing, because bare hands deal zero damage.
 | Dragon's Servant I / II | 45 HP / 90 HP (tier II has 3 armour) |
 | Drowned Thrall | 30 HP |
 | Siren I / II | 55 HP / 100 HP (tier II has 3 armour) |
-| Dragon King · Drowned Queen | 300 HP each, phase 2 at 150 |
+| Dragon King | 450 HP, phase 2 at 225 |
+| Drowned Queen | 600 HP, phase 2 at 300 |
+| New room | +3 hearts, once per room |
+| Siren I / II | ~5.2s between attacks |
+| Drowned Thrall | ~2.6s between lunges |
 | Fireballs and bubbles | destructible — **2 sword swings** or **5 bare-handed** |
 | Zombie Crawler | 26 HP · 7 damage · drops 1–3 coins about 60% of the time |
 | Black hole | 7 damage every 0.35s inside ~4 blocks · lives 3s · one per nest per 5s |

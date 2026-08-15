@@ -65,6 +65,9 @@ export const sfx = {
   break:    () => { noise({ dur: 0.5, gain: 0.34, filter: 700, sweepTo: 180, q: 1.2 }); tone({ freq: 90, to: 35, dur: 0.45, type: 'sawtooth', gain: 0.14 }); },
   hurt:     () => { tone({ freq: 300, to: 90, dur: 0.26, type: 'sawtooth', gain: 0.2 }); noise({ dur: 0.16, gain: 0.16, filter: 800 }); },
   pickup:   () => { tone({ freq: 620, dur: 0.07, type: 'square', gain: 0.13 }); tone({ freq: 930, dur: 0.1, type: 'square', gain: 0.11, delay: 0.06 }); },
+  // Rising and soft-edged, so it cannot be mistaken for picking a coin up —
+  // triangles rather than the squares every other pickup in the game uses.
+  heal:     () => { tone({ freq: 392, dur: 0.16, type: 'triangle', gain: 0.11 }); tone({ freq: 587, dur: 0.2, type: 'triangle', gain: 0.1, delay: 0.1 }); tone({ freq: 784, dur: 0.28, type: 'triangle', gain: 0.08, delay: 0.2 }); },
   ui:       () => tone({ freq: 480, dur: 0.05, type: 'square', gain: 0.08 }),
   uiBig:    () => { tone({ freq: 330, dur: 0.1, type: 'triangle', gain: 0.14 }); tone({ freq: 495, dur: 0.16, type: 'triangle', gain: 0.12, delay: 0.07 }); },
   denied:   () => tone({ freq: 160, to: 110, dur: 0.16, type: 'square', gain: 0.13 }),

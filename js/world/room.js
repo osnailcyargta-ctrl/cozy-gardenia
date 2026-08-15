@@ -141,6 +141,10 @@ export class Room {
     this.holes = [];      // and what they throw
     this.cleared = false;
     this.enteredT = 0;
+    // Set the first time you walk in. Somewhere new is worth three hearts;
+    // walking back through a door you already came through is not.
+    this.visited = false;
+    this.keyDropped = false;
 
     this.deadFromSave = new Set(deadSet);
     this.enemies = (def.enemies || []).map((e, i) => {
@@ -242,7 +246,14 @@ export class Room {
 
         // Book four locks the way on instead of on a particular monster: the
         // last thing standing is carrying the key, whoever it turns out to be.
-        if (this.def.keyOnLastKill && this.enemies.every((x) => x.dead)) {
+        //
+        // The latch matters. This loop runs over every corpse in the frame, and
+        // anything that kills several at once — a wave-gun tick, a black hole,
+        // the last two walking into a swing together — leaves them all holding
+        // "everything is dead" at the same moment. Without it, one room could
+        // hand over twenty-five keys.
+        if (this.def.keyOnLastKill && !this.keyDropped && this.enemies.every((x) => x.dead)) {
+          this.keyDropped = true;
           this.addDrop(this.def.keyOnLastKill, e.x, e.y);
         }
       }

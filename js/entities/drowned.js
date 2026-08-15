@@ -45,6 +45,14 @@ function drip(e, chance = 0.9) {
 
 const CHASE = 'chase', WINDUP = 'windup', LUNGE = 'lunge', REST = 'rest';
 
+/**
+ * How long a thrall stands there after a lunge. Lifted out of the state machine
+ * because it is the one number here that is balance rather than animation — the
+ * windup and the lunge itself are how the attack reads, and shortening or
+ * stretching those would change what you are being asked to dodge.
+ */
+const T_REST = 1.8;
+
 export class Thrall {
   constructor(x, y) {
     this.x = x; this.y = y;
@@ -147,7 +155,7 @@ export class Thrall {
       }
 
       case REST:
-        if (this.t > 0.7) { this.state = CHASE; this.t = 0; }
+        if (this.t > T_REST) { this.state = CHASE; this.t = 0; }
         break;
     }
 
@@ -217,9 +225,18 @@ export class Thrall {
 const S_CHASE = 'chase', S_PULLWIND = 'pullwind', S_PULL = 'pull',
       S_BOLT = 'bolt', S_RETREAT = 'retreat', S_REST = 'rest';
 
+/**
+ * `rearm` is how long a siren circles you before winding up again — the gap
+ * between attacks, not the attack. It lives in the table rather than inline in
+ * the state machine because it is the knob balance actually wants, and because
+ * the two tiers should be able to differ on it later without another rewrite.
+ * Everything else about the attack — the 0.55s telegraph, the pull, the spacing
+ * of the bolts — is deliberately left alone: those are what you read and react
+ * to, and stretching them would change the fight rather than its pace.
+ */
 const S_TIER = {
-  1: { hp: 55, speed: 40, bolts: 2, boltDamage: 9,  pullDamage: 6,  armour: 0, scale: 1,    rim: null,      light: 'rgba(90,210,210,ALPHA)' },
-  2: { hp: 100, speed: 48, bolts: 3, boltDamage: 13, pullDamage: 10, armour: 3, scale: 1.18, rim: '#e8688a', light: 'rgba(232,104,138,ALPHA)' },
+  1: { hp: 55, speed: 40, bolts: 2, boltDamage: 9,  pullDamage: 6,  armour: 0, rearm: 2.2, scale: 1,    rim: null,      light: 'rgba(90,210,210,ALPHA)' },
+  2: { hp: 100, speed: 48, bolts: 3, boltDamage: 13, pullDamage: 10, armour: 3, rearm: 2.2, scale: 1.18, rim: '#e8688a', light: 'rgba(232,104,138,ALPHA)' },
 };
 
 export class Siren {
@@ -316,7 +333,7 @@ export class Siren {
         // wants to be at arm's length, not on top of you
         if (dist > 76) { mx = (dx / dist) * SPEED; my = (dy / dist) * SPEED; }
         else if (dist < 46) { mx = -(dx / dist) * SPEED * 0.8; my = -(dy / dist) * SPEED * 0.8; }
-        if (this.t > 1.1 && dist < 110) { this.state = S_PULLWIND; this.t = 0; this.pulled = false; }
+        if (this.t > this.cfg.rearm && dist < 110) { this.state = S_PULLWIND; this.t = 0; this.pulled = false; }
         break;
 
       case S_PULLWIND: {
