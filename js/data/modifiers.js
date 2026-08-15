@@ -45,9 +45,9 @@ const REFORGE_TABLE = [
   [null, 35], ['light', 22], ['heavy', 22], ['broken', 16], ['legendary', 5],
 ];
 
-function roll(table) {
+function roll(table, rand = Math.random) {
   const total = table.reduce((n, [, w]) => n + w, 0);
-  let r = Math.random() * total;
+  let r = rand() * total;
   for (const [id, w] of table) {
     r -= w;
     if (r <= 0) return id;
@@ -55,8 +55,8 @@ function roll(table) {
   return null;
 }
 
-export function rollForge() { return roll(FORGE_TABLE); }
-export function rollReforge() { return roll(REFORGE_TABLE); }
+export function rollForge(rand) { return roll(FORGE_TABLE, rand); }
+export function rollReforge(rand) { return roll(REFORGE_TABLE, rand); }
 
 export const REFORGE_COST = 20;
 

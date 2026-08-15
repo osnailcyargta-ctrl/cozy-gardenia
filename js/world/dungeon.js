@@ -11,21 +11,10 @@
 // books one and two got in.
 
 import { TILE, VW, VH } from '../engine/canvas.js';
+import { rng } from '../engine/rng.js';
 
 export const MILESTONE = 10;
 export const MAX_ALIVE = 25;
-
-/* ---------- seeded noise ---------- */
-
-function rng(seed) {
-  let s = seed >>> 0;
-  return () => {
-    s ^= s << 13; s >>>= 0;
-    s ^= s >> 17;
-    s ^= s << 5; s >>>= 0;
-    return s / 4294967296;
-  };
-}
 
 /* ---------- difficulty ---------- */
 
@@ -51,35 +40,44 @@ export const isMilestone = (depth) => depth % MILESTONE === 0;
 
 const W = 30, H = 16;
 
+/**
+ * The empty shell. Column 28 is wall on every row but the two doorway rows —
+ * that is what makes the exit a doorway rather than a gap in a field, and it is
+ * the difference between a gate you have to open and a gate you can stroll
+ * around. Book one shipped the other version once; see the note in data/rooms.js.
+ */
 function blankRows() {
   const rows = [];
   for (let y = 0; y < H; y++) {
     if (y < 2 || y > 13) rows.push('#'.repeat(W));
-    else rows.push('#' + '.'.repeat(W - 2) + '#');
+    else if (y === 7 || y === 8) rows.push('#' + '.'.repeat(W - 2) + '#');
+    else rows.push('#' + '.'.repeat(W - 3) + '##');
   }
   return rows;
 }
 
-/** Can you get from the spawn tile to the exit tile through this layout? */
-function reaches(rows, from, to) {
-  const seen = new Set();
-  const key = (x, y) => y * W + x;
+/** Every tile you can actually walk to from `from`, as a Set of y*W+x. */
+function reachable(rows, from) {
+  const seen = new Set([from[1] * W + from[0]]);
   const q = [from];
-  seen.add(key(from[0], from[1]));
   while (q.length) {
     const [x, y] = q.pop();
-    if (x === to[0] && y === to[1]) return true;
     for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const nx = x + dx, ny = y + dy;
       if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
       if (rows[ny][nx] === '#') continue;
-      const k = key(nx, ny);
+      const k = ny * W + nx;
       if (seen.has(k)) continue;
       seen.add(k);
       q.push([nx, ny]);
     }
   }
-  return false;
+  return seen;
+}
+
+/** Can you get from the spawn tile to the exit tile through this layout? */
+function reaches(rows, from, to) {
+  return reachable(rows, from).has(to[1] * W + to[0]);
 }
 
 /**
@@ -127,15 +125,22 @@ function layout(seed, depth) {
 
 /* ---------- population ---------- */
 
-const KINDS = ['crawler', 'crawler', 'crawler', 'servant1', 'servant2', 'siren1'];
+const KINDS = ['crawler', 'crawler', 'crawler', 'stray1', 'stray2', 'siren1'];
 
+/**
+ * Where the monsters stand. Every point has to be somewhere the player can
+ * physically get to: the way on is locked until the room is cleared, so one
+ * monster stranded in a pocket the pillars closed off is a run you can neither
+ * finish nor walk away from.
+ */
 function spawnPoints(rand, rows, n) {
+  const open = reachable(rows, [2, 8]);
   const out = [];
   let guard = 0;
   while (out.length < n && guard++ < 600) {
     const tx = 8 + ((rand() * (W - 12)) | 0);
     const ty = 3 + ((rand() * (H - 7)) | 0);
-    if (rows[ty][tx] === '#') continue;
+    if (!open.has(ty * W + tx)) continue;
     const x = tx * TILE + TILE / 2, y = ty * TILE + TILE / 2;
     // never right on top of where the player walks in
     if (x < 110) continue;
@@ -161,7 +166,10 @@ export function makeRoom(runSeed, depth) {
   if (milestone) {
     // A landing: the way out, someone to trade with, and often a station.
     props.push({ type: 'portal', x: VW / 2, y: VH / 2 });
-    props.push({ type: 'merchant', x: VW / 2 - 96, y: VH / 2 });
+    // The stall is stocked from the room's own seed, so it is the same two
+    // items every time you come back to this landing — a shop that reshuffled
+    // whenever you stepped through the portal would not be a shop.
+    props.push({ type: 'merchant', x: VW / 2 - 96, y: VH / 2, seed: (seed ^ 0x5bf03635) >>> 0 });
     const station = rand();
     if (station > 0.62) props.push({ type: 'anvil', x: VW / 2 + 96, y: VH / 2 - 8 });
     else if (station > 0.28) props.push({ type: 'smelter', x: VW / 2 + 96, y: VH / 2 });
@@ -175,7 +183,14 @@ export function makeRoom(runSeed, depth) {
     }
   } else {
     for (const p of spawnPoints(rand, rows, count)) {
-      enemies.push({ type: KINDS[(rand() * KINDS.length) | 0], x: p.x, y: p.y, statMul });
+      // Even the coin roll comes off the seed: a room you rebuilt by dying and
+      // walking back down should be the same room, purse included.
+      enemies.push({
+        type: KINDS[(rand() * KINDS.length) | 0], x: p.x, y: p.y, statMul,
+        keyId: null,
+        dropsCoin: rand() < 0.6,
+        coinCount: 1 + ((rand() * 3) | 0),
+      });
     }
 
     // Torches go on the walls, the way they do everywhere else in the game.
@@ -214,7 +229,13 @@ export function makeRoom(runSeed, depth) {
       : { fog: 0.34, vignette: 1.08, ambient: '#342c50' },
     floor: 'crypt',
     props,
-    gate: null,
+    // The way on is barred until the room is empty. Landings have nothing to
+    // kill, so barring one would be barring it forever; and a room the generator
+    // somehow left unpopulated gets the same mercy.
+    gate: milestone || !enemies.length
+      ? null
+      : { tx: W - 2, ty: 7, kind: 'locked', keyId: 'crypt_key', theme: 'crypt' },
+    keyOnLastKill: milestone || !enemies.length ? null : 'crypt_key',
     enemies,
     // Forward only. There is no `B` tile anywhere in this book: the door you
     // came through is sealed the moment you are through it.

@@ -7,6 +7,7 @@ import * as P from '../engine/particles.js';
 import { sfx } from '../engine/audio.js';
 import { FIST } from '../data/items.js';
 import * as cam from '../engine/camera.js';
+import { dev } from '../systems/dev.js';
 
 const A = decodeSet(PLAYER, 'player');
 const LEFT = flipSet({ sideIdle: A.sideIdle, sideWalk: A.sideWalk }, 'playerL');
@@ -94,6 +95,10 @@ export class Player {
   get attacking() { return this.attackT > 0; }
 
   hurt(amount, fromX, fromY) {
+    // Godmode is a flag rather than a huge `invuln`, because invuln is a
+    // countdown that half the game writes to — it would be switched off again
+    // by the next doorway.
+    if (dev.god) return false;
     if (this.invuln > 0 || this.dead) return false;
     this.hp -= amount;
     this.invuln = 0.75;
@@ -208,7 +213,10 @@ export class Player {
     this.ghosts = this.ghosts.filter((g) => g.life > 0);
 
     const ax = axis();
-    const sp = SPEED * (this.speedMul ?? 1);
+    // `speedMul` belongs to the world — book two's flood writes it every frame
+    // and the library resets it — so the cheat multiplies on top rather than
+    // fighting over the same field.
+    const sp = SPEED * (this.speedMul ?? 1) * dev.speedMul;
     const target = { x: ax.x * sp, y: ax.y * sp };
 
     // attacking roots you slightly — commitment makes combat readable

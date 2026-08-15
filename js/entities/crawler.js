@@ -18,7 +18,7 @@ const A = decodeSet(CRAWLER, 'crawler');
 const CHASE = 'chase', BITE = 'bite', REST = 'rest';
 
 export class Crawler {
-  constructor(x, y, statMul = 1) {
+  constructor(x, y, statMul = 1, purse = null) {
     this.x = x; this.y = y;
     this.hw = 5; this.hh = 5;
     this.radius = 7;
@@ -39,9 +39,11 @@ export class Crawler {
     this.state = CHASE;
     this.t = Math.random() * 0.4;
     this.bitThisAttack = false;
-    // The coin purse of the dungeon. Not every corpse is carrying.
-    this.dropsCoin = Math.random() < 0.6;
-    this.coinCount = 1 + ((Math.random() * 3) | 0);
+    // The coin purse of the dungeon. Not every corpse is carrying. The dungeon
+    // hands this down from the room's seed so a rebuilt room is the same room;
+    // anywhere else, roll it here.
+    this.dropsCoin = purse ? purse.dropsCoin : Math.random() < 0.6;
+    this.coinCount = purse ? purse.coinCount : 1 + ((Math.random() * 3) | 0);
   }
 
   hurt(amount, fromX, fromY, knockScale = 1) {

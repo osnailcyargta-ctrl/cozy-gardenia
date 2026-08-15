@@ -54,9 +54,13 @@ and no ending — only how far down you are willing to go.
 - **It gets worse every two rooms.** Three monsters at first, then one more every second room, and
   that "one" itself grows by one every ten. Past **25 alive** the surplus stops being more bodies and
   becomes more HP and damage instead — 25 is what stays both playable and drawable.
-- **Zombie crawlers, dragon's servants I and II, and sirens I.** The crawler is new: it chases and it
+- **The way on is barred.** Every room with anything alive in it has a locked gate across its exit,
+  and the last thing standing is carrying the **Crypt Key**. You do not get to walk past a room down
+  here; you get to finish it. Landings are the exception — nothing to fight, so nothing to unlock.
+- **Zombie crawlers, stray servants I and II, and sirens I.** The crawler is new: it chases and it
   bites, that is the whole of it, and it drops the coins everything down here is bought with. The
-  servants keep no key — there is nothing to unlock.
+  strays are the dragon's servants down to the last number, but they have no master and carry no
+  Dragon Key — there is no dragon here and nothing his key would open.
 
 | Room | wanted | on screen | HP / damage |
 |---|---|---|---|
@@ -78,6 +82,10 @@ speed — the cooldown between attacks — never how fast you walk.
 | Heavy | −25% swing speed, +40% damage | 22% / 22% |
 | Broken | −20% swing speed, −30% damage | never / 16% |
 | Legendary | +15% speed, +35% damage, +25% crit | 11% / 5% |
+
+There is no limit on how many swords you own. Every blade rolls its own modifier, so the only way to
+chase a better one is to be allowed to make another — and `iron_sword` stacks to 1, so each takes its
+own slot and no two ever merge.
 
 Forging can come out plain but never broken — you only break a weapon by gambling with one you
 already have. **Reforge** at any anvil costs **20 coins** and rerolls what you are holding, which is
@@ -127,12 +135,27 @@ the collapse has finished playing.
 ### Saving
 
 Leaving a book writes it down: gates you broke stay broken, chests you emptied stay empty, **the
-forge is exactly as you left it**, and your satchel comes with you across a page reload. **Enemies
-are not saved** — the things guarding a room come back, so a book you have already finished is still
-a book you can play.
+things you killed stay dead**, whatever you left lying on the floor is still lying there, the forge
+is exactly as you left it, and your satchel comes with you across a page reload.
 
-Book four saves one number instead: the deepest landing you reached. Nothing else in that book
-outlives the room it was in, let alone the book.
+Enemies used to be left out on purpose, so a finished book was still a book you could play. That
+stopped being tenable the moment coins had a use: book one's servants drop gold, book four's merchant
+takes it, and a book whose guards come back every time you open the cover is a coin printer. So the
+boss stays down too. A finished book is a quiet one.
+
+Floor drops are saved for a less obvious reason. Kill the servant carrying the key, leave the key
+where it fell, and walk out. The servant does not come back — so if the key is not saved either, it
+exists nowhere and the book can never be finished again.
+
+Dying is still a clean slate for the room you died in: the enemies you killed *this visit* get up
+again. Only leaving the book writes them down. That does leave a slow way to farm coins by dying on
+purpose; closing it is one line in `respawn()` if it ever becomes annoying.
+
+Book four cannot store its rooms — there are infinitely many and it throws them away as you walk. It
+stores **the seed they are generated from** instead, which is the same thing at a thousandth of the
+size: the same seed rebuilds the same layouts, the same monsters, the same anvil on the same landing,
+and the same two things in the merchant's hands. What it saves alongside that is the deepest landing
+you reached and which rows you have already bought out.
 
 The forge has to be in there. Lighting an ore takes it out of your satchel the moment you press the
 button, so a save that dropped the smelter destroyed that ore outright — and book one hands you
@@ -153,6 +176,20 @@ Killing a boss does not interrupt you and does not congratulate you. There is no
 anywhere in the game. You find out a story ended by walking back to the library and seeing the chain
 gone from the next book on the shelf.
 
+### Developer mode
+
+`Ctrl`+`M` moves you onto a save of its own, under the key `testdeveloperidkdktestperioddpr`. The
+real save is not read, not written, and not touched — switching is a reload, which is the only way to
+be sure nothing from one save is still sitting in memory while the other is being played. A small
+`DEV` badge in the corner says which one you are on.
+
+Once you are in, `M` opens the tools: spawn any enemy in the game, drop any item at your feet,
+godmode, ×100 damage, and a move-speed multiplier up to 10×. **Outside developer mode `M` does
+nothing at all** — no panel, no message, no hint the menu exists.
+
+The cheats are not saved. Every one of them is something you switch on to look at one specific thing,
+and having godmode survive a reload mostly means wondering for ten minutes why nothing can hurt you.
+
 ## Controls
 
 | Input | Action |
@@ -169,6 +206,8 @@ gone from the next book on the shelf.
 | `E`, `Q` or `Esc` | Close any panel |
 | `R` | Erase all saved progress (asks first) |
 | `F1` | Toggle post-processing (debug) |
+| `Ctrl`+`M` | Switch in and out of developer mode |
+| `M` | Debug menu — **only in developer mode**; does nothing otherwise |
 
 Panels close with `E` and `Q`, not just `Esc` — one hand stays on QWEASD and the
 other on the mouse, and `Esc` is a long reach from there.
@@ -195,6 +234,7 @@ does nothing, because bare hands deal zero damage.
 | Zombie Crawler | 26 HP · 7 damage · drops 1–3 coins about 60% of the time |
 | Black hole | 7 damage every 0.35s inside ~4 blocks · lives 3s · one per nest per 5s |
 | Critical hit | ×1.75, one roll per swing |
+| Crypt gate | locked — no amount of hitting it helps, only the Crypt Key |
 | Dungeon cap | 25 enemies alive; past that the surplus becomes HP and damage |
 | Boss wake / collapse | ~3.5s and ~2.5s, player locked out for both |
 | Dash | ~60px burst, i-frames while dashing, 0.75s cooldown |
@@ -247,12 +287,13 @@ js/
   main.js          boot, game loop, combat glue, adaptive resolution
   engine/          canvas · postfx · sprite · input · camera · particles
                    audio (synthesised sfx) · music (streamed tracks)
+  engine/          canvas · postfx · sprite · input · camera · particles · rng
   data/            palette · sprites (all pixel art) · items · rooms · modifiers
   world/           tilemap · collision · room · dungeon (book four's generator)
   entities/        player · servant · dragonking · drowned · drownedqueen
                    crawler · blackhole · projectile · wave · gate · props
-  systems/         inventory · smelting · save
-  ui/              hud · inventoryUI · craftUI · shopUI · shelfUI · icons
+  systems/         inventory · smelting · save · dev
+  ui/              hud · inventoryUI · craftUI · shopUI · shelfUI · devUI · icons
 ```
 
 Sound effects are synthesised at runtime with WebAudio — oscillators and filtered noise bursts, no
@@ -286,7 +327,14 @@ the way back out is always reachable — with props included in the fill. Both p
 bugs this project has had were solid props sitting where nothing was checking for them.
 
 Book four runs that same fill **inside the generator**, before a room is ever handed back: a layout
-whose exit cannot be reached is thrown away and reseeded. It has to, because a book with no way back
-turns one unlucky pillar into a run you cannot finish and cannot leave. The test walks twenty-six
-generated rooms on real key presses rather than teleporting to the doorway — a teleport proves the
-transition works and proves nothing at all about whether a body can get there.
+whose exit cannot be reached is thrown away and reseeded, and **every monster is placed inside the
+reachable set**. That second part became load-bearing the moment the exit was gated. One crawler
+sealed behind a pillar used to be a monster standing around doing nothing; now it is a room that can
+never be cleared, in a book with no way back — a run you can neither finish nor walk away from.
+
+The doorway column is walled off on every row but the two the door occupies, for the same reason book
+one's is. An earlier version of book one left that column open, so its gate stood in a field and you
+could stroll around the entire forge chain. A gate is only a gate if the wall beside it is real.
+
+The tests walk generated rooms on real key presses rather than teleporting to the doorway — a
+teleport proves the transition works and proves nothing at all about whether a body can get there.

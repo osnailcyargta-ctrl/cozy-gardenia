@@ -11,6 +11,7 @@ import { iconCanvas } from './icons.js';
 import { ITEM_DEFS } from '../data/items.js';
 import { rollForge, displayName, modColour } from '../data/modifiers.js';
 import { sfx } from '../engine/audio.js';
+import { rng } from '../engine/rng.js';
 
 export const STOCK = [
   { id: 'iron_sword',       price: 20, count: 1, modded: true },
@@ -37,12 +38,18 @@ export function rollStock(rand = Math.random) {
   for (let i = 0; i < 2 && pool.length; i++) {
     out.push(pool.splice((rand() * pool.length) | 0, 1)[0]);
   }
-  return out.map((e) => ({ ...e, mod: e.modded ? rollForge() : undefined }));
+  return out.map((e) => ({ ...e, mod: e.modded ? rollForge(rand) : undefined }));
 }
 
 export function open(prop) {
   stall = prop;
-  if (!stall.stock) stall.stock = rollStock();
+  // A seeded stall restocks itself identically every time the room is rebuilt,
+  // which in book four is every time you walk back down to it.
+  if (!stall.stock) {
+    stall.stock = rollStock(prop.seed ? rng(prop.seed) : Math.random);
+    // What you already bought is the one thing the seed cannot imply.
+    stall.soldRows?.forEach((v, i) => { if (v && stall.stock[i]) stall.stock[i].sold = true; });
+  }
   popup.classList.remove('hidden');
   sfx.uiBig();
   refresh();
@@ -93,6 +100,8 @@ function buy(i) {
   entry.sold = true;
 
   sfx.pickup();
+  stall.soldRows = stall.stock.map((e) => !!e.sold);
+  game.onShopSold?.(stall);
   game.refreshInventory();
   refresh();
 }

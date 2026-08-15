@@ -466,3 +466,75 @@
 
 /* four books have to fit the panel, so they give up a little of their gap */
 .books { gap: 30px; }
+
+/* ---------- developer mode ----------
+   Deliberately cold and clinical against the rest of the game's warm gold and
+   purple: this panel is not part of the story, and it should not look like it
+   thinks it is. */
+.dev-panel { min-width: 460px; max-width: 520px; }
+#dev-title { color: #7fd8c4; text-shadow: 0 0 16px rgba(80, 200, 175, 0.35); }
+
+.dev-note { font-size: 12px; color: #9a8fb5; line-height: 1.55; margin-bottom: 6px; }
+.dev-note code { color: #7fd8c4; font-size: 11px; }
+
+.dev-group { margin-bottom: 16px; }
+.dev-group > .dev-label {
+  display: block; margin-bottom: 7px;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: #6f6288;
+}
+.dev-line { display: flex; align-items: center; gap: 8px; }
+.dev-line select, .dev-line input {
+  flex: 1; min-width: 0;
+  padding: 8px 10px;
+  font: inherit; font-size: 13px;
+  color: #e8d9b8;
+  background: #140f22;
+  border: 1px solid #3d3050;
+  border-radius: 3px;
+}
+.dev-line input { flex: 0 0 68px; text-align: center; }
+.dev-line button { margin-top: 0; padding: 8px 16px; font-size: 12px; letter-spacing: 0.1em; }
+
+/* toggles and the speed picker share one chip, so on/off reads the same way */
+.dev-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+/* `.panel button` also matches these and carries a 30px top margin for the big
+   story buttons, so this needs the extra class to outweigh it — a chip row falls
+   apart with thirty pixels above every chip. */
+.panel .dev-chip {
+  margin-top: 0;
+  padding: 7px 13px;
+  font: inherit; font-size: 12px;
+  color: #9a8fb5;
+  background: linear-gradient(180deg, rgba(24,17,36,0.9), rgba(13,9,20,0.94));
+  border: 1px solid #3d3050;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.12s ease, color 0.12s ease, box-shadow 0.15s ease;
+}
+.panel .dev-chip:hover { border-color: #5f8f88; color: #cdbfe4; }
+.panel .dev-chip.on {
+  color: #0e1a19;
+  background: linear-gradient(180deg, #7fd8c4, #4fa595);
+  border-color: #9ff0dd;
+  box-shadow: 0 0 16px rgba(127, 216, 196, 0.3);
+}
+
+.dev-foot {
+  margin-top: 18px; padding-top: 14px;
+  border-top: 1px solid #2e2440;
+  font-size: 11px; color: #6f6288; text-align: center;
+}
+.dev-foot b { color: #7fd8c4; }
+
+/* A permanent reminder of which save you are playing on. Small, but there is no
+   other way to tell a developer save from a real one at a glance. */
+#dev-badge {
+  position: absolute; top: 10px; right: 12px; z-index: 30;
+  padding: 3px 8px;
+  font-size: 10px; letter-spacing: 0.22em;
+  color: #7fd8c4;
+  background: rgba(10, 24, 22, 0.72);
+  border: 1px solid rgba(127, 216, 196, 0.4);
+  border-radius: 3px;
+  pointer-events: none;
+}

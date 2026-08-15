@@ -16,6 +16,8 @@ export const ITEM_DEFS = {
   coral_key: { id: 'coral_key', name: 'Coral Key', stack: 8, desc: 'Opens a drowned gate' },
 
   // ---- book four ----
+  crypt_key: { id: 'crypt_key', name: 'Crypt Key', stack: 8, desc: 'Opens the way deeper' },
+
   blackholian_nest: {
     id: 'blackholian_nest', name: "Blackholian's Nest", stack: 8,
     desc: 'Place it · spits a black hole every 5s',

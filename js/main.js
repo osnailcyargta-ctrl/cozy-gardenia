@@ -28,6 +28,8 @@ import * as craftUI from './ui/craftUI.js';
 import * as shelfUI from './ui/shelfUI.js';
 import * as hotbar from './ui/hotbar.js';
 import * as shopUI from './ui/shopUI.js';
+import * as devUI from './ui/devUI.js';
+import { dev, DEV_DAMAGE } from './systems/dev.js';
 
 /* ============================================================
    Game state
@@ -54,6 +56,9 @@ const game = {
   toast: () => {},
   refreshInventory,
   syncWeapon,
+  onShopSold: (stall) => {
+    if (inDungeon()) save.markSold(game.bookIndex, game.depth, stall.soldRows);
+  },
   enterBook,
   onBossDefeated,
   // console escape hatches
@@ -81,6 +86,7 @@ craftUI.init(game);
 shelfUI.init(game);
 hotbar.init(game);
 shopUI.init(game);
+devUI.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
@@ -132,7 +138,9 @@ function goToLibrary() {
   // Leaving a book is the moment the player thinks of as "done for now", so it
   // is the moment the world is written down.
   if (game.scene === 'book') {
-    if (inDungeon()) save.saveDungeon(game.bookIndex, game.milestone, game.inventory, hotbar.selectedIndex());
+    if (inDungeon()) {
+      save.saveDungeon(game.bookIndex, game.milestone, game.inventory, hotbar.selectedIndex(), game.smelter);
+    }
     else if (game.rooms.length) {
       save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex(), game.smelter);
     }
@@ -176,7 +184,7 @@ function enterBook(index) {
   }
 
   // fresh run: rebuild rooms and the forge. Chests carry their own contents.
-  game.rooms = book.rooms.map((def) => new Room(def));
+  game.rooms = book.rooms.map((def, i) => new Room(def, save.deadEnemies(index, i)));
   game.roomIndex = 0;
 
   // Gates you broke stay broken, chests you emptied stay empty, and the forge
@@ -201,8 +209,11 @@ function enterBook(index) {
 function enterDungeon(index) {
   game.rooms = new Map();
   game.milestone = save.deepest(index);
-  game.runSeed = (Math.random() * 0xffffffff) >>> 0;
-  game.smelter.reset();
+  // Minted once and then kept. A fresh seed every visit meant the same landing
+  // handed you a different station and a different stall each time you came
+  // back to it — the depth persisted but nothing else did.
+  game.runSeed = save.runSeed(index);
+  save.restoreDungeon(index, game.smelter);
   game.scene = 'book';
   music.play('rush');
   // You always land on the last checkpoint you reached; a fresh run starts at 1.
@@ -212,7 +223,10 @@ function enterDungeon(index) {
 function dungeonRoom(depth) {
   let room = game.rooms.get(depth);
   if (!room) {
-    room = new Room(dungeon.makeRoom(game.runSeed, depth));
+    const def = dungeon.makeRoom(game.runSeed, depth);
+    const sold = save.soldRows(game.bookIndex, depth);
+    if (sold) for (const p of def.props) if (p.type === 'merchant') p.soldRows = sold;
+    room = new Room(def);
     game.rooms.set(depth, room);
   }
   return room;
@@ -343,13 +357,14 @@ function fadeThen(fn) {
 
 function anyPopupOpen() {
   return invUI.isOpen() || craftUI.smelterOpen() || craftUI.anvilOpen() || shelfUI.isOpen()
-    || shopUI.isOpen()
+    || shopUI.isOpen() || devUI.isOpen()
     || !deathScreen.classList.contains('hidden')
     || !resetScreen.classList.contains('hidden');
 }
 
 function closeAllPopups() {
   closeReset();
+  devUI.close();
   shopUI.close();
   invUI.close();
   craftUI.closeSmelter();
@@ -403,7 +418,10 @@ function resolveSwing() {
   // One roll per swing, not per target: a critical is a good hit, not a good
   // frame, and rolling per enemy would make crowds crit constantly.
   const crit = Math.random() < (w.crit || 0);
-  const dmg = crit ? Math.round(w.damage * CRIT_MULT) : w.damage;
+  // The multiplier lands here rather than on `w`: an unmodded weapon's `w` IS
+  // the shared ITEM_DEFS entry, so scaling it in place would make every future
+  // iron sword in the save a hundred times stronger.
+  const dmg = Math.round((crit ? w.damage * CRIT_MULT : w.damage) * dev.damageMul);
   if (crit && w.damage > 0) {
     cam.shake(5, 0.22);
     P.burst(p.x + Math.cos(p.attackAngle) * 14, p.y + Math.sin(p.attackAngle) * 14, 12, {
@@ -566,7 +584,7 @@ function respawn() {
   // restart the current room's fight from its entrance
   const room = game.rooms[game.roomIndex];
   if (room) {
-    const fresh = new Room(room.def);
+    const fresh = new Room(room.def, room.deadFromSave);
     fresh.smelter = game.smelter;
     fresh.inheritContainers(room);
     game.rooms[game.roomIndex] = fresh;
@@ -726,6 +744,15 @@ function update(dt) {
 }
 
 function handleKeys(popups) {
+  // Read before the popup guard below, or the menu opens and never closes.
+  // Outside developer mode a bare M does nothing at all — no menu, no message,
+  // nothing that hints the menu is there.
+  if (input.pressed('Ctrl+KeyM')) { devUI.openSwitch(); return; }
+  if (input.pressed('KeyM')) {
+    if (dev.on) devUI.openTools();
+    return;
+  }
+
   // Esc is a long reach from WASD when one hand stays on QWEASD and the other
   // on the mouse, so E and Q close panels too — including the one that opened.
   const closeKey = input.pressed('KeyQ') || input.pressed('KeyE') || input.pressed('Escape');

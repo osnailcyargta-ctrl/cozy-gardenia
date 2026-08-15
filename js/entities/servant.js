@@ -57,7 +57,10 @@ export class Servant {
     this.dashAngle = 0;
     this.hitThisAttack = false;
     this.hoverT = Math.random() * 6;
-    this.dropsKey = tier === 2;
+    // What this one is carrying, if anything. The gate reads its `keyId` too, so
+    // the two only have to agree in the room definition — nothing here needs to
+    // know which book it is standing in.
+    this.keyId = tier === 2 ? 'key' : null;
 
     // written by WaveField, expired here
     this.slowMul = 1;
@@ -323,5 +326,18 @@ export class Servant {
     }
     const pulse = this.state === WINDUP ? 0.6 + Math.sin(this.t * 40) * 0.4 : 0.34;
     addLight(ctx, this.x, this.y, 34, this.cfg.light, pulse);
+  }
+}
+
+/**
+ * Book four's servants. Same body, same numbers, same fight — but no master and
+ * therefore no Dragon Key. There is no dragon down here and nothing his key
+ * would open; a servant that dropped one would just be littering.
+ */
+export class StrayServant extends Servant {
+  constructor(x, y, tier = 1, statMul = 1) {
+    super(x, y, tier, statMul);
+    this.name = `Stray Servant ${tier === 2 ? 'II' : 'I'}`;
+    this.keyId = null;
   }
 }

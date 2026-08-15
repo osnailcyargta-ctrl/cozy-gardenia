@@ -3,7 +3,7 @@
 
 import { TileMap } from './tilemap.js';
 import { Prop } from '../entities/props.js';
-import { Servant } from '../entities/servant.js';
+import { Servant, StrayServant } from '../entities/servant.js';
 import { DragonKing } from '../entities/dragonking.js';
 import { Thrall, Siren } from '../entities/drowned.js';
 import { DrownedQueen } from '../entities/drownedqueen.js';
@@ -86,8 +86,46 @@ function drawNest(ctx, n) {
   ctx.restore();
 }
 
+/**
+ * Everything that can be a monster, in one place. The debug menu's spawn list
+ * builds from the same table the rooms do, so there is no second roster to keep
+ * in step with this one.
+ */
+export const ENEMY_KINDS = {
+  servant1: (x, y, m) => new Servant(x, y, 1, m),
+  servant2: (x, y, m) => new Servant(x, y, 2, m),
+  thrall:   (x, y, m) => new Thrall(x, y, m),
+  siren1:   (x, y, m) => new Siren(x, y, 1, m),
+  siren2:   (x, y, m) => new Siren(x, y, 2, m),
+  crawler:  (x, y, m, def) => new Crawler(x, y, m, def?.dropsCoin === undefined ? null : def),
+  stray1:   (x, y, m) => new StrayServant(x, y, 1, m),
+  stray2:   (x, y, m) => new StrayServant(x, y, 2, m),
+  king:     (x, y) => new DragonKing(x, y),
+  queen:    (x, y) => new DrownedQueen(x, y),
+};
+
+/** Names for the debug menu, in the order it should list them. */
+export const ENEMY_NAMES = {
+  crawler: 'Zombie Crawler',
+  servant1: "Dragon's Servant I", servant2: "Dragon's Servant II",
+  stray1: 'Stray Servant I', stray2: 'Stray Servant II',
+  thrall: 'Drowned Thrall', siren1: 'Siren I', siren2: 'Siren II',
+  king: 'Dragon King', queen: 'Drowned Queen',
+};
+
+export function makeEnemy(type, x, y, statMul = 1, def = null) {
+  return ENEMY_KINDS[type]?.(x, y, statMul, def) || null;
+}
+
 export class Room {
-  constructor(def) {
+  /**
+   * `deadSet` holds the indices — into `def.enemies`, not into the live list —
+   * of things already killed on a previous visit. They are skipped rather than
+   * built and marked dead: no corpse to draw, nothing to update, and the index
+   * stays meaningful because it points at the definition rather than at whoever
+   * happens to be standing.
+   */
+  constructor(def, deadSet = new Set()) {
     this.def = def;
     this.id = def.id;
     this.name = def.name;
@@ -104,21 +142,19 @@ export class Room {
     this.cleared = false;
     this.enteredT = 0;
 
-    this.enemies = (def.enemies || []).map((e) => {
+    this.deadFromSave = new Set(deadSet);
+    this.enemies = (def.enemies || []).map((e, i) => {
+      if (deadSet.has(i)) return null;
       const m = e.statMul || 1;
-      switch (e.type) {
-        case 'servant':  return new Servant(e.x, e.y, e.tier, m);
-        case 'king':     return new DragonKing(e.x, e.y);
-        case 'thrall':   return new Thrall(e.x, e.y);
-        case 'siren':    return new Siren(e.x, e.y, e.tier, m);
-        case 'queen':    return new DrownedQueen(e.x, e.y);
-        // book four's roster, named so the generator reads as a list of monsters
-        case 'crawler':  return new Crawler(e.x, e.y, m);
-        case 'servant1': return new Servant(e.x, e.y, 1, m);
-        case 'servant2': return new Servant(e.x, e.y, 2, m);
-        case 'siren1':   return new Siren(e.x, e.y, 1, m);
-        default:         return null;
+      // the two that name their tier in the def rather than in the type
+      const made = e.type === 'servant' ? new Servant(e.x, e.y, e.tier, m)
+        : e.type === 'siren' ? new Siren(e.x, e.y, e.tier, m)
+        : makeEnemy(e.type, e.x, e.y, m, e);
+      if (made) {
+        made.defIndex = i;
+        if (e.keyId !== undefined) made.keyId = e.keyId;
       }
+      return made;
     }).filter(Boolean);
 
     this.smelter = null;   // set by the game when this room has one
@@ -199,13 +235,16 @@ export class Room {
             this.addDrop('gold_coin', e.x + (Math.random() - 0.5) * 12, e.y + (Math.random() - 0.5) * 12);
           }
         }
-        if (e instanceof Servant) {
-          if (e.dropsKey) this.addDrop('key', e.x, e.y);
-          this.scatterCoins(e, 'gold_coin');
-        }
         // Book two's drowned leave no coin. The queen is not a hoarder, so
         // nothing under her rule is worth carrying out except the key.
-        if (e instanceof Siren && e.dropsKey) this.addDrop('coral_key', e.x, e.y);
+        if (e instanceof Servant) this.scatterCoins(e, 'gold_coin');
+        if (e.keyId) this.addDrop(e.keyId, e.x, e.y);
+
+        // Book four locks the way on instead of on a particular monster: the
+        // last thing standing is carrying the key, whoever it turns out to be.
+        if (this.def.keyOnLastKill && this.enemies.every((x) => x.dead)) {
+          this.addDrop(this.def.keyOnLastKill, e.x, e.y);
+        }
       }
 
       // A boss counts as beaten when its collapse has finished playing, not

@@ -150,11 +150,9 @@ export function refreshAnvil() {
   anvilOut.insertAdjacentHTML('beforeend',
     `<span class="nm">Iron Sword</span><span class="qty">18 dmg · 2 blocks</span>`);
 
-  forgeBtn.disabled = !ok || inv.count('iron_sword') > 0;
-  if (inv.count('iron_sword') > 0) {
-    anvilMsg.textContent = 'You already carry one.';
-    anvilMsg.className = '';
-  }
+  // No cap on how many you own. Every blade rolls its own modifier, and the
+  // only way to chase a better one is to be allowed to make another.
+  forgeBtn.disabled = !ok;
 
   // ---- reforge ----
   const held = heldWeapon();
@@ -184,7 +182,7 @@ function onForge() {
     sfx.denied();
     return;
   }
-  if (inv.isFull() && inv.count('iron_sword') === 0) {
+  if (inv.isFull()) {
     anvilMsg.textContent = 'Your satchel is full.';
     anvilMsg.className = 'err';
     sfx.denied();

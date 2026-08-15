@@ -18,6 +18,7 @@ const S = {
                  hurt:  decode(BLOCKS.coralGateHurt[0], 'coralGateHurt') },
   locked:      decode(BLOCKS.gateLocked[0], 'gateLocked'),
   coralLocked: decode(BLOCKS.coralGateLocked[0], 'coralGateLocked'),
+  cryptLocked: decode(BLOCKS.cryptGateLocked[0], 'cryptGateLocked'),
 };
 
 // splinters for wood, shards for coral
@@ -148,7 +149,7 @@ export class Gate {
     const damaged = breakable && this.hp <= this.maxHp * 0.5;
     const set = S[this.theme] || S.wood;
     const spr = this.kind === 'locked'
-      ? (this.theme === 'coral' ? S.coralLocked : S.locked)
+      ? ({ coral: S.coralLocked, crypt: S.cryptLocked }[this.theme] || S.locked)
       : (damaged ? set.hurt : set.whole);
 
     const alpha = this.open ? 1 - this.openT / 0.35 : 1;
@@ -178,8 +179,10 @@ export class Gate {
 
   drawLight(ctx) {
     if (this.kind === 'locked' && !this.open) {
-      addLight(ctx, this.x, this.y - 8, 22,
-        this.theme === 'coral' ? 'rgba(232,104,138,ALPHA)' : 'rgba(240,204,90,ALPHA)', 0.34);
+      addLight(ctx, this.x, this.y - 8, 22, {
+        coral: 'rgba(232,104,138,ALPHA)',
+        crypt: 'rgba(168,102,224,ALPHA)',
+      }[this.theme] || 'rgba(240,204,90,ALPHA)', 0.34);
     }
     if (this.open && this.openT < 0.5) {
       addLight(ctx, this.x, this.y, 70, 'rgba(255,200,120,ALPHA)', 1 - this.openT / 0.5);

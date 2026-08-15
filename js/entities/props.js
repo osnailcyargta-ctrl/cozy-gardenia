@@ -60,6 +60,11 @@ export class Prop {
     // lost in the room rather than the thing the whole hub is built around.
     this.scale = type === 'shelf' ? 2 : 1;
 
+    // The merchant's stall is stocked from a seed the room generator hands
+    // down, and remembers which rows are already bought out.
+    if (def.seed) this.seed = def.seed;
+    if (def.soldRows) this.soldRows = def.soldRows;
+
     // Every chest owns its contents. One shared container across the whole game
     // meant book two's wave-gun chest and book one's ore chest were the same
     // box wearing two hats.

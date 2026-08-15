@@ -65,7 +65,7 @@ export class Thrall {
     this.state = CHASE;
     this.t = 0;
     this.hitThisAttack = false;
-    this.dropsKey = false;
+    this.keyId = null;
   }
 
   hurt(amount, fromX, fromY, knockScale = 1) {
@@ -252,7 +252,7 @@ export class Siren {
     this.boltsLeft = cfg.bolts;
     this.boltTimer = 0;
     this.pulled = false;
-    this.dropsKey = tier === 2;
+    this.keyId = tier === 2 ? 'coral_key' : null;
     this.projectiles = [];
   }
 

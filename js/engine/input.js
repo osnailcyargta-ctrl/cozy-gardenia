@@ -7,6 +7,18 @@ const held = new Set();
 const pressedThisFrame = new Set();
 
 export const mouse = { x: 0, y: 0, down: false, rightDown: false };
+
+/**
+ * Modifier keys, tracked separately because the pressed-set stores `e.code` and
+ * a code alone cannot tell Ctrl+M from M. The debug menu needs to: one of those
+ * two switches save files.
+ *
+ * This is live state, so it is only good for "is Ctrl down right now". For an
+ * edge-triggered chord, read `pressed('Ctrl+KeyM')` instead — the combination is
+ * stamped into the pressed-set at keydown, which means letting go of Ctrl a
+ * millisecond before the frame runs cannot turn the chord back into a bare key.
+ */
+export const mods = { ctrl: false, shift: false, alt: false };
 let leftClicked = false;
 let rightClicked = false;
 
@@ -21,18 +33,30 @@ const CODE_ALIAS = {
 export let uiCapture = false;
 export function setUICapture(v) { uiCapture = v; }
 
+function readMods(e) {
+  mods.ctrl = e.ctrlKey || e.metaKey;
+  mods.shift = e.shiftKey;
+  mods.alt = e.altKey;
+}
+
 window.addEventListener('keydown', (e) => {
+  readMods(e);
   if (e.repeat) return;
   const k = CODE_ALIAS[e.code] || e.code;
   held.add(k);
   pressedThisFrame.add(k);
+  if (e.ctrlKey || e.metaKey) pressedThisFrame.add('Ctrl+' + e.code);
   // stop the page scrolling / quick-find under the game
   if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Slash'].includes(e.code)) {
     e.preventDefault();
   }
+  // Firefox mutes the tab on Ctrl+M, which would silence the soundtrack every
+  // time you switched into developer mode.
+  if (e.code === 'KeyM' && (e.ctrlKey || e.metaKey)) e.preventDefault();
 });
 
 window.addEventListener('keyup', (e) => {
+  readMods(e);
   held.delete(CODE_ALIAS[e.code] || e.code);
 });
 
