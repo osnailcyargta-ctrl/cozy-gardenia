@@ -1,7 +1,9 @@
-// Room gates. Three kinds:
+// Room gates. Four kinds:
 //   'wood'   — immune to fists, so it gates progress behind a real weapon
 //   'coral'  — book two's equivalent: same rules, more health, different art
 //   'locked' — no amount of hitting helps; it wants the key its book's elite drops
+//   'error'  — book three's: also unhittable, and opens only when the sliding
+//              board behind it is put back in order
 
 import { decode, draw, silhouette } from '../engine/sprite.js';
 import { BLOCKS } from '../data/sprites.js';
@@ -19,6 +21,7 @@ const S = {
   locked:      decode(BLOCKS.gateLocked[0], 'gateLocked'),
   coralLocked: decode(BLOCKS.coralGateLocked[0], 'coralGateLocked'),
   cryptLocked: decode(BLOCKS.cryptGateLocked[0], 'cryptGateLocked'),
+  errorGate:   decode(BLOCKS.errorGate[0], 'errorGate'),
 };
 
 // splinters for wood, shards for coral
@@ -27,11 +30,16 @@ const DEBRIS = {
   coral: ['#3d1430', '#7a1f45', '#b83a5a', '#e8688a'],
 };
 
+/** Gates you cannot hit open, whatever you are holding. */
+const SEALED = (kind) => kind === 'locked' || kind === 'error';
+
 export class Gate {
-  constructor({ tx, ty, kind, hp = 12, keyId = 'key', theme = 'wood' }) {
+  constructor({ tx, ty, kind, hp = 12, keyId = 'key', theme = 'wood', board = 3 }) {
     this.tx = tx; this.ty = ty;
     this.kind = kind;
     this.keyId = keyId;
+    // How big the sliding board behind an errored gate is: 3 or 4 a side.
+    this.board = board;
     // a locked gate still needs to look like it belongs to its book
     this.theme = kind === 'locked' ? theme : kind;
     this.maxHp = hp;
@@ -49,6 +57,13 @@ export class Gate {
     this.shake = 0;
     this.flash = 0;
     this.openT = 0;
+
+    // An errored gate is the only gate you talk to rather than hit or unlock,
+    // so it joins the props in the interaction sweep. Same fields they use.
+    this.type = 'gate';
+    this.interactive = kind === 'error';
+    this.label = 'Defragment';
+    this.reach = 26;
   }
 
   get isLocked() { return this.kind === 'locked' && !this.open; }
@@ -57,10 +72,15 @@ export class Gate {
   strike(damage, weapon, fromX, fromY) {
     if (this.open) return 'broken';
 
-    if (this.kind === 'locked') {
+    // Neither of these can be hit open. A locked gate wants its key; an errored
+    // one wants its blocks put back where they belong.
+    if (SEALED(this.kind)) {
       this.shake = 0.25;
       sfx.denied();
-      P.burst(this.x, this.y, 5, { colour: '#7d92a6', speed: 40, life: 0.3, size: 2, grav: 120 });
+      P.burst(this.x, this.y, 5,
+        this.kind === 'error'
+          ? { colour: '#ff3355', speed: 44, life: 0.3, size: 2, grav: 90 }
+          : { colour: '#7d92a6', speed: 40, life: 0.3, size: 2, grav: 120 });
       return 'blocked';
     }
 
@@ -93,6 +113,7 @@ export class Gate {
     if (this.open) return false;
     this.open = true;
     this.solid = false;
+    this.interactive = false;
     this.openT = 0;
     sfx.unlock();
     P.burst(this.x, this.y, 18, {
@@ -105,6 +126,7 @@ export class Gate {
   breakOpen() {
     this.open = true;
     this.solid = false;
+    this.interactive = false;
     this.openT = 0;
     this.hp = 0;
     sfx.break();
@@ -131,6 +153,7 @@ export class Gate {
   openSilently() {
     this.open = true;
     this.solid = false;
+    this.interactive = false;
     this.hp = 0;
     this.openT = 1;
   }
@@ -145,12 +168,13 @@ export class Gate {
     if (this.open && this.openT > 0.35) return;
 
     const sx = this.shake > 0 ? Math.sin(this.shake * 90) * this.shake * 12 : 0;
-    const breakable = this.kind !== 'locked';
+    const breakable = !SEALED(this.kind);
     const damaged = breakable && this.hp <= this.maxHp * 0.5;
     const set = S[this.theme] || S.wood;
-    const spr = this.kind === 'locked'
-      ? ({ coral: S.coralLocked, crypt: S.cryptLocked }[this.theme] || S.locked)
-      : (damaged ? set.hurt : set.whole);
+    const spr = this.kind === 'error' ? S.errorGate
+      : this.kind === 'locked'
+        ? ({ coral: S.coralLocked, crypt: S.cryptLocked }[this.theme] || S.locked)
+        : (damaged ? set.hurt : set.whole);
 
     const alpha = this.open ? 1 - this.openT / 0.35 : 1;
 
@@ -178,6 +202,13 @@ export class Gate {
   }
 
   drawLight(ctx) {
+    // An errored gate does not glow steadily, it flickers like a bad signal.
+    if (this.kind === 'error' && !this.open) {
+      const f = 0.5 + Math.sin(this.openT * 0 + performance.now() * 0.011) * 0.25
+        + (Math.random() > 0.93 ? 0.4 : 0);
+      addLight(ctx, this.x, this.y - 8, 26, 'rgba(38,194,71,ALPHA)', 0.3 * f);
+      return;
+    }
     if (this.kind === 'locked' && !this.open) {
       addLight(ctx, this.x, this.y - 8, 22, {
         coral: 'rgba(232,104,138,ALPHA)',

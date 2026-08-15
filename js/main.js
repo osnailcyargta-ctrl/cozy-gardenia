@@ -12,7 +12,7 @@ import { LIBRARY, BOOKS } from './data/rooms.js';
 import { FIST, ITEM_DEFS } from './data/items.js';
 import { applyMod, CRIT_MULT } from './data/modifiers.js';
 
-import { Room } from './world/room.js';
+import { Room, makeEnemy } from './world/room.js';
 import * as dungeon from './world/dungeon.js';
 import { inArc } from './world/collision.js';
 import { Player } from './entities/player.js';
@@ -29,6 +29,8 @@ import * as shelfUI from './ui/shelfUI.js';
 import * as hotbar from './ui/hotbar.js';
 import * as shopUI from './ui/shopUI.js';
 import * as devUI from './ui/devUI.js';
+import * as puzzleUI from './ui/puzzleUI.js';
+import { Claw } from './entities/claw.js';
 import { dev, DEV_DAMAGE } from './systems/dev.js';
 
 /* ============================================================
@@ -87,6 +89,7 @@ shelfUI.init(game);
 hotbar.init(game);
 shopUI.init(game);
 devUI.init(game);
+puzzleUI.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
@@ -177,6 +180,10 @@ function enterBook(index) {
 
   game.bookIndex = index;
   game.bookDefeated = false;
+  // Book three eats the top off your health bar and the library gives it back.
+  // That already happens because goToLibrary builds a fresh Player, but relying
+  // on a side effect for a rule the player can feel is asking for it.
+  if (game.player) { game.player.maxHp = 100; game.player.hp = Math.min(game.player.hp, 100); }
 
   if (book.infinite) {
     enterDungeon(index);
@@ -302,6 +309,45 @@ function loadRoom(index, dir) {
   if (healed) showHeal();
 }
 
+/**
+ * Mode two of the Digital Claw Cannon: point at empty floor and the hand goes,
+ * on a cable, until it hits something and comes back. One at a time, because it
+ * is your hand and you only have the one to spare.
+ */
+function throwClaw() {
+  const p = game.player, room = game.room;
+  const w = p.weapon;
+  if (w.kind !== 'claw' || room.claw || p.throwCool > 0 || p.dead) return false;
+  const angle = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
+  room.claw = new Claw(p.x + Math.cos(angle) * 10, p.y + Math.sin(angle) * 10, angle, w, p);
+  p.throwCool = w.throwCooldown ?? 0.4;
+  return true;
+}
+
+/**
+ * The nest in the Heap. Four summons, ten seconds apart — both drawn on the
+ * block, so nobody has to count in their head.
+ */
+function summonFromNest(prop) {
+  if (prop.charges <= 0 || prop.cool > 0) { sfx.denied(); return false; }
+  prop.charges--;
+  prop.cool = 10;
+  sfx.uiBig();
+  cam.shake(4, 0.3);
+  for (const [dx, dy] of [[-26, -18], [26, 18]]) {
+    const e = makeEnemy('nullbyte', prop.x + dx, prop.y + dy);
+    if (!e) continue;
+    // never part of the room definition, so it is never written into the save
+    e.defIndex = -1;
+    game.room.enemies.push(e);
+    P.burst(e.x, e.y, 14, {
+      colour: '#5cff7a', speed: 90, life: 0.45, size: 2, drag: 0.9,
+      glow: 10, glowColour: 'rgba(38,194,71,ALPHA)',
+    });
+  }
+  return true;
+}
+
 /** Three hearts, in the HP the hearts are actually made of. */
 const ROOM_HEAL = 30;
 
@@ -393,7 +439,7 @@ function fadeThen(fn) {
 
 function anyPopupOpen() {
   return invUI.isOpen() || craftUI.smelterOpen() || craftUI.anvilOpen() || shelfUI.isOpen()
-    || shopUI.isOpen() || devUI.isOpen()
+    || shopUI.isOpen() || devUI.isOpen() || puzzleUI.isOpen()
     || !deathScreen.classList.contains('hidden')
     || !resetScreen.classList.contains('hidden');
 }
@@ -401,6 +447,7 @@ function anyPopupOpen() {
 function closeAllPopups() {
   closeReset();
   devUI.close();
+  puzzleUI.close();
   shopUI.close();
   invUI.close();
   craftUI.closeSmelter();
@@ -410,9 +457,30 @@ function closeAllPopups() {
   for (const p of game.room?.props || []) p.opened = false;
 }
 
-function doInteract() {
+/**
+ * What the cursor is pointing at — and that you could still reach.
+ *
+ * Right click used to interact with whatever was nearest, wherever you clicked.
+ * It has to be aimed now, because right click also throws the claw: pointing at
+ * a chest opens it, pointing at bare floor sends your hand.
+ */
+function propUnderCursor() {
+  const room = game.room, p = game.player;
+  const mx = input.mouse.x, my = input.mouse.y;
+  let best = null, bestD = Infinity;
+  for (const q of room.interactives()) {
+    // a little slack, because these boxes are small and the cursor is a point
+    if (Math.abs(mx - q.x) > q.hw + 6 || Math.abs(my - q.y) > q.hh + 6) continue;
+    const dx = Math.max(0, Math.abs(p.x - q.x) - q.hw);
+    const dy = Math.max(0, Math.abs(p.y - q.y) - q.hh);
+    const d = Math.hypot(dx, dy);
+    if (d < q.reach && d < bestD) { best = q; bestD = d; }
+  }
+  return best;
+}
+
+function doInteract(prop) {
   const room = game.room;
-  const prop = room.nearestInteractive(game.player);
   if (!prop) return false;
 
   switch (prop.type) {
@@ -435,6 +503,11 @@ function doInteract() {
     case 'merchant':
       shopUI.open(prop);
       return true;
+    case 'gate':
+      puzzleUI.open(prop);
+      return true;
+    case 'nullbyteNest':
+      return summonFromNest(prop);
     case 'portal':
       goToLibrary();
       return true;
@@ -553,7 +626,10 @@ function tryUnlockGate() {
 function locked(index) {
   const b = BOOKS[index];
   if (!b || (!b.rooms && !b.infinite)) return true;
-  return b.needs !== undefined && !game.cleared.has(b.needs);
+  if (b.needs !== undefined && !game.cleared.has(b.needs)) return true;
+  // Book three wants a story finished AND a depth survived.
+  if (b.needsDepth !== undefined && save.deepest(3) < b.needsDepth) return true;
+  return false;
 }
 
 /* ============================================================
@@ -738,12 +814,18 @@ function update(dt) {
       resolveSwing();
     }
 
-    // --- interact (E or right click) ---
-    if ((input.pressed('KeyE') || input.tookRightClick()) && !p.dead) {
-      doInteract();
+    // --- interact ---
+    // E takes the nearest thing; right click takes the thing you point at, and
+    // falls through to the claw when you are pointing at nothing.
+    if (input.pressed('KeyE') && !p.dead) doInteract(room.nearestInteractive(p));
+    if (input.tookRightClick() && !p.dead) {
+      const aimed = propUnderCursor();
+      if (aimed) doInteract(aimed);
+      else throwClaw();
     }
   }
 
+  p.throwCool = Math.max(0, (p.throwCool || 0) - dt);
   p.update(dt, room.map, room.solids());
   room.update(dt, p, game);
 

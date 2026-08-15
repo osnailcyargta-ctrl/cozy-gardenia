@@ -39,7 +39,50 @@ keeps for you, so arriving here without one is not possible.
 
 Nothing here is hoarded and nothing drops coin. The queen is not greedy.
 
-Book three is not written yet.
+### Book three — *Digital Matrix*
+
+Chained until **two** things are true: book two finished, and ten rooms deep into the dungeon
+survived. It is the only book with two locks, and it wants one of each kind — a story completed and
+an endless thing endured.
+
+1. **Boot Sector** — one Nullbyte, and the first errored gate.
+2. **Stack Trace** — two of them.
+3. **Heap** — a **Nullbyte Nest**: a 2×2 block that summons two more, four times, ten seconds apart.
+4. **Kernel Space** — four at once.
+5. **The Kernel** — the boss: sweeping laser arms, rings of bullets fired all at once, and walls of
+   light with a single gap. 400 HP, two phases.
+
+**Every doorway is an errored gate.** You cannot hit it open and there is no key. It is a sliding
+board — a picture of a circuit, shuffled — and putting the picture back together opens the door.
+Rooms one and two are 3×3, three and four are 4×4.
+
+The scramble is built out of legal moves rather than by shuffling the array, and that is not fussiness:
+**exactly half of all arrangements of a sliding puzzle cannot be reached from the solved state.** A
+random shuffle would hand roughly half of all players a gate that can never be opened, in a book whose
+only way forward is through it.
+
+**Nullbyte** chases and swipes, but one step in its loop is the **corruption dash**: it locks onto
+where you are standing, turns to static, and throws itself at that point. It cannot be hurt at all
+while that is happening. A hit does not take health — it takes **half a heart off your maximum**, and
+that stays gone until you leave the book. It bottoms out at 7.5 hearts. Walk home and you get it all
+back; walk in again and it can start over.
+
+One Nullbyte in fifty is carrying the **Digital Claw Cannon**.
+
+### The Digital Claw Cannon
+
+Your own hand, turned into a green binary claw. Two modes:
+
+| | |
+|---|---|
+| **Left click** | 6 damage · 0.5s swing, then a 0.3s cooldown — 0.8s end to end |
+| **Right click on empty floor** | throws the hand: 18 damage, no range limit, comes back when it hits anything |
+
+Only one hand can be in the air at a time, and it returns to wherever you are standing by the time it
+gets back — not to where you threw it from.
+
+It is the only weapon whose cooldown starts *after* the swing rather than at the same time. That rule
+lives on the weapon (`swing`), so no other weapon was slowed by adding it.
 
 ### Book four — *Infinite Dungeon*
 
@@ -187,6 +230,16 @@ Killing a boss does not interrupt you and does not congratulate you. There is no
 anywhere in the game. You find out a story ended by walking back to the library and seeing the chain
 gone from the next book on the shelf.
 
+### Pointing at things
+
+Right click interacts with whatever the cursor is **over**, and only if you are also close enough to
+reach it. It used to interact with whatever was nearest, wherever you clicked — that had to change,
+because right click also throws the claw: point at a chest and it opens, point at bare floor and your
+hand goes.
+
+`E` still takes the nearest thing without aiming, which is what keeps the first two books playable
+exactly as they were.
+
 ### Developer mode
 
 `Ctrl`+`M` moves you onto a save of its own, under the key `testdeveloperidkdktestperioddpr`. The
@@ -206,12 +259,12 @@ and having godmode survive a reload mostly means wondering for ten minutes why n
 | Input | Action |
 |---|---|
 | `WASD` / arrows | Move |
-| `E` | Interact (shelf, smelter, chest, anvil, merchant, portal) |
+| `E` | Interact with the nearest thing (shelf, smelter, chest, anvil, merchant, portal, errored gate) |
 | `Q` | Satchel (4×4) |
 | `Space` or `F` | Dash (i-frames, 0.75s cooldown) |
 | Scroll wheel / `1`–`4` | Switch hotbar slot |
 | Left click | Attack with the selected slot — or **place it**, if it is a block |
-| Right click | Interact |
+| Right click | Interact with what you are **pointing at** — or throw the claw, if you are pointing at floor |
 | Left click *in inventory* | Move **one** item |
 | Right click *in inventory* | Move the **whole stack** |
 | `E`, `Q` or `Esc` | Close any panel |
@@ -242,6 +295,10 @@ does nothing, because bare hands deal zero damage.
 | Siren I / II | 55 HP / 100 HP (tier II has 3 armour) |
 | Dragon King | 450 HP, phase 2 at 225 |
 | Drowned Queen | 600 HP, phase 2 at 300 |
+| The Kernel | 400 HP, phase 2 at 200 |
+| Nullbyte | 40 HP · 8 damage · untouchable while it corrupts |
+| Corruption | −half a heart of MAX health per hit, down to 7.5 hearts |
+| Digital Claw Cannon | 6 melee / 18 thrown · 2% drop from a Nullbyte |
 | New room | +3 hearts, once per room |
 | Siren I / II | ~5.2s between attacks |
 | Drowned Thrall | ~2.6s between lunges |
@@ -306,9 +363,11 @@ js/
   data/            palette · sprites (all pixel art) · items · rooms · modifiers
   world/           tilemap · collision · room · dungeon (book four's generator)
   entities/        player · servant · dragonking · drowned · drownedqueen
-                   crawler · blackhole · projectile · wave · gate · props
-  systems/         inventory · smelting · save · dev
-  ui/              hud · inventoryUI · craftUI · shopUI · shelfUI · devUI · icons
+                   crawler · nullbyte · kernel · claw · blackhole
+                   projectile · wave · gate · props
+  systems/         inventory · smelting · save · dev · puzzle
+  ui/              hud · inventoryUI · craftUI · shopUI · shelfUI · devUI
+                   puzzleUI · icons
 ```
 
 Sound effects are synthesised at runtime with WebAudio — oscillators and filtered noise bursts, no

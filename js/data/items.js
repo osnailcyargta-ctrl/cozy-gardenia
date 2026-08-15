@@ -15,6 +15,23 @@ export const ITEM_DEFS = {
   // ---- book two ----
   coral_key: { id: 'coral_key', name: 'Coral Key', stack: 8, desc: 'Opens a drowned gate' },
 
+  // ---- book three ----
+  digital_claw_cannon: {
+    id: 'digital_claw_cannon', name: 'Digital Claw Cannon', stack: 1,
+    desc: '6 dmg claw · right click throws it for 18',
+    // Two modes, so `kind` only describes the left click. The right click is
+    // handled where interaction is: point at empty floor and the hand goes.
+    weapon: {
+      kind: 'claw', name: 'Digital Claw Cannon',
+      damage: 6, range: 26, arc: 1.7,
+      // The swing animation runs first and the cooldown only starts once it is
+      // over, so a full claw is 0.8s end to end.
+      swing: 0.5, cooldown: 0.3,
+      projectileChip: 3,
+      throwDamage: 18, throwCooldown: 0.4, throwSpeed: 240,
+    },
+  },
+
   // ---- book four ----
   crypt_key: { id: 'crypt_key', name: 'Crypt Key', stack: 8, desc: 'Opens the way deeper' },
 

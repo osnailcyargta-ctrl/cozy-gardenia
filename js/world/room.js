@@ -8,6 +8,8 @@ import { DragonKing } from '../entities/dragonking.js';
 import { Thrall, Siren } from '../entities/drowned.js';
 import { DrownedQueen } from '../entities/drownedqueen.js';
 import { Crawler } from '../entities/crawler.js';
+import { Nullbyte } from '../entities/nullbyte.js';
+import { Kernel } from '../entities/kernel.js';
 import { Nest } from '../entities/blackhole.js';
 import { Gate } from '../entities/gate.js';
 import { decode, draw } from '../engine/sprite.js';
@@ -100,7 +102,9 @@ export const ENEMY_KINDS = {
   crawler:  (x, y, m, def) => new Crawler(x, y, m, def?.dropsCoin === undefined ? null : def),
   stray1:   (x, y, m) => new StrayServant(x, y, 1, m),
   stray2:   (x, y, m) => new StrayServant(x, y, 2, m),
+  nullbyte: (x, y, m) => new Nullbyte(x, y, m),
   king:     (x, y) => new DragonKing(x, y),
+  kernel:   (x, y) => new Kernel(x, y),
   queen:    (x, y) => new DrownedQueen(x, y),
 };
 
@@ -110,7 +114,8 @@ export const ENEMY_NAMES = {
   servant1: "Dragon's Servant I", servant2: "Dragon's Servant II",
   stray1: 'Stray Servant I', stray2: 'Stray Servant II',
   thrall: 'Drowned Thrall', siren1: 'Siren I', siren2: 'Siren II',
-  king: 'Dragon King', queen: 'Drowned Queen',
+  nullbyte: 'Nullbyte',
+  king: 'Dragon King', queen: 'Drowned Queen', kernel: 'The Kernel',
 };
 
 export function makeEnemy(type, x, y, statMul = 1, def = null) {
@@ -139,6 +144,7 @@ export class Room {
     this.waves = [];
     this.nests = [];      // placed blackholian nests
     this.holes = [];      // and what they throw
+    this.claw = null;     // the one thrown hand, if there is one
     this.cleared = false;
     this.enteredT = 0;
     // Set the first time you walk in. Somewhere new is worth three hearts;
@@ -242,6 +248,10 @@ export class Room {
         // Book two's drowned leave no coin. The queen is not a hoarder, so
         // nothing under her rule is worth carrying out except the key.
         if (e instanceof Servant) this.scatterCoins(e, 'gold_coin');
+        // One in fifty nullbytes is carrying the thing that made them.
+        if (e instanceof Nullbyte && Math.random() < 0.02) {
+          this.addDrop('digital_claw_cannon', e.x, e.y);
+        }
         if (e.keyId) this.addDrop(e.keyId, e.x, e.y);
 
         // Book four locks the way on instead of on a particular monster: the
@@ -291,6 +301,11 @@ export class Room {
     for (const w of this.waves) w.update(dt, this.enemies);
     this.waves = this.waves.filter((w) => !w.dead);
 
+    if (this.claw) {
+      this.claw.update(dt, this.enemies, this.map, solids);
+      if (this.claw.dead) this.claw = null;
+    }
+
     for (const n of this.nests) {
       const hole = n.update(dt);
       if (hole) this.holes.push(hole);
@@ -315,10 +330,16 @@ export class Room {
    * box, not its centre — otherwise a large prop like the shelf is harder to
    * use than a small one purely because you can't stand near its middle.
    */
+  /** Props plus, in book three, the errored gate — it is talked to, not hit. */
+  interactives() {
+    const out = this.props.filter((p) => p.interactive);
+    if (this.gate?.interactive) out.push(this.gate);
+    return out;
+  }
+
   nearestInteractive(player) {
     let best = null, bestD = Infinity;
-    for (const p of this.props) {
-      if (!p.interactive) continue;
+    for (const p of this.interactives()) {
       const dx = Math.max(0, Math.abs(player.x - p.x) - p.hw);
       const dy = Math.max(0, Math.abs(player.y - p.y) - p.hh);
       const d = Math.hypot(dx, dy);
@@ -354,6 +375,7 @@ export class Room {
 
     // waves sit on top of everything they are drowning
     for (const w of this.waves) w.draw(ctx);
+    this.claw?.draw(ctx);
     for (const h of this.holes) h.draw(ctx);
   }
 
@@ -365,6 +387,7 @@ export class Room {
       else if (!e.dead || e.deathT < 0.4) e.drawLight(ctx);
     }
     for (const w of this.waves) w.drawLight(ctx);
+    this.claw?.drawLight(ctx);
     for (const n of this.nests) addLight(ctx, n.x, n.y, 40 + n.charge * 26, 'rgba(168,102,224,ALPHA)', 0.4 + n.pulse * 0.5);
     // last, so the holes can eat the light everything else just added
     for (const h of this.holes) h.drawLight(ctx);

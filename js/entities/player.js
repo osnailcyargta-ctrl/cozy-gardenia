@@ -130,11 +130,34 @@ export class Player {
 
   heal(n) { this.hp = Math.min(this.maxHp, this.hp + n); }
 
+  /**
+   * Book three's nullbytes do not take health, they take the top off the bar.
+   * It lasts as long as you stay in that book — the library hands out a fresh
+   * Player, so walking home is what undoes it.
+   */
+  corrupt(n, floor) {
+    if (this.maxHp <= floor) return false;
+    this.maxHp = Math.max(floor, this.maxHp - n);
+    this.hp = Math.min(this.hp, this.maxHp);
+    this.hurtFlash = 0.4;
+    return true;
+  }
+
   startAttack(angle) {
-    if (this.cooldown > 0 || this.dead || this.frozen) return false;
+    // Blocked by the swing as well as by the cooldown. Most weapons animate for
+    // 0.2s and that is shorter than their cooldown anyway, so this only bites on
+    // the claw — whose whole point is that the animation runs first and the
+    // cooldown only starts once it is over.
+    if (this.cooldown > 0 || this.attackT > 0 || this.dead || this.frozen) return false;
     this.attackAngle = angle;
-    this.attackT = 0.2;
-    this.cooldown = this.weapon.cooldown;
+    this.attackT = this.weapon.swing ?? 0.2;
+    // A weapon that names its own swing gets the sequential rule the claw was
+    // specified with: the animation runs, and only then does the cooldown start.
+    // Everything else keeps the cooldown it has always had — stacking the 0.2s
+    // animation onto the sword would have quietly slowed every weapon in the game.
+    this.cooldown = this.weapon.swing === undefined
+      ? this.weapon.cooldown
+      : this.attackT + this.weapon.cooldown;
     this.swungThisAttack = false;
     sfx.swing();
 
@@ -311,7 +334,7 @@ export class Player {
   }
 
   drawSwing(ctx) {
-    const k = 1 - this.attackT / 0.2;             // 0 -> 1 over the swing
+    const k = 1 - this.attackT / (this.weapon.swing ?? 0.2);   // 0 -> 1 over the swing
     const a0 = this.attackAngle - this.weapon.arc / 2;
     const a = a0 + this.weapon.arc * k;
     const r = this.weapon.range * 0.78;
@@ -340,7 +363,7 @@ export class Player {
     // the reader carries a faint lantern glow — keeps the player readable in fog
     addLight(ctx, this.x, this.y, 72, 'rgba(150,180,255,ALPHA)', 0.5);
     if (this.attacking && !this.weapon.isFist) {
-      const k = 1 - this.attackT / 0.2;
+      const k = 1 - this.attackT / (this.weapon.swing ?? 0.2);
       const a = this.attackAngle - this.weapon.arc / 2 + this.weapon.arc * k;
       addLight(ctx, this.x + Math.cos(a) * 16, this.y + Math.sin(a) * 16, 26, 'rgba(190,220,255,ALPHA)', 0.7);
     }

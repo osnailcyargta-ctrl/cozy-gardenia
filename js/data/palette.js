@@ -96,4 +96,19 @@ export const PAL = {
   'X': '#12261c',  // kelp dark
   'Y': '#2c5638',  // kelp
   'Z': '#5c8f5a',  // kelp light
+
+  // --- digital (book three) ---
+  // The first bright colours in the palette, and the first keys that are not
+  // letters — all 62 of 0-9a-zA-Z were spoken for. The decoder is a plain
+  // PAL[char] lookup, so punctuation works exactly as well; '.' already proved
+  // it. A matrix book without terminal green is not a matrix book, so this is a
+  // deliberate break from the cold, desaturated rule the rest of the game keeps.
+  '!': '#031a08',  // screen black
+  '@': '#0a3d17',  // circuit dark
+  '$': '#127a2c',  // circuit
+  '+': '#26c247',  // terminal green
+  '=': '#5cff7a',  // terminal bright
+  '-': '#c8ffd4',  // phosphor white
+  '~': '#7a1020',  // error red dark
+  '^': '#ff3355',  // error red
 };

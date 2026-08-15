@@ -328,15 +328,159 @@ export const BOOK2_ROOMS = [
   },
 ];
 
+
+/* ============================================================
+   BOOK THREE — Digital Matrix
+   Five rooms. Every doorway is an errored gate: it cannot be hit open, only
+   defragmented. The board sizes climb 3, 3, 4, 4 and the last room has no gate
+   at all, because what is standing in it is the way out.
+   ============================================================ */
+
+const NB = (x, y) => ({ type: 'nullbyte', x, y });
+
+export const BOOK3_ROOMS = [
+  // ---------- Room 1: the first error ----------
+  {
+    id: 'b3r1',
+    name: 'Boot Sector',
+    tiles: shell({ right: true, left: true }),
+    spawn: { x: 60, y: 128 },
+    spawnBack: { x: 420, y: 128 },
+    mood: { fog: 0.3, vignette: 1.06, ambient: '#1d3a2a' },
+    floor: 'digital',
+    props: [
+      { type: 'torch', x: 120, y: 40 },
+      { type: 'torch', x: 300, y: 40 },
+      { type: 'torch', x: 120, y: 216 },
+      { type: 'torch', x: 300, y: 216 },
+      { type: 'torch', x: 24, y: 128 },
+    ],
+    gate: { tx: 28, ty: 7, kind: 'error', board: 3 },
+    enemies: [NB(320, 128)],
+    exitTo: 1,
+    backTo: 'library',
+  },
+
+  // ---------- Room 2: two of them ----------
+  {
+    id: 'b3r2',
+    name: 'Stack Trace',
+    tiles: shell({ right: true, left: true }),
+    spawn: { x: 60, y: 128 },
+    spawnBack: { x: 420, y: 128 },
+    mood: { fog: 0.34, vignette: 1.08, ambient: '#1a3526' },
+    floor: 'digital',
+    props: [
+      { type: 'torch', x: 88,  y: 40 },
+      { type: 'torch', x: 232, y: 40 },
+      { type: 'torch', x: 376, y: 40 },
+      { type: 'torch', x: 88,  y: 216 },
+      { type: 'torch', x: 232, y: 216 },
+      { type: 'torch', x: 376, y: 216 },
+    ],
+    gate: { tx: 28, ty: 7, kind: 'error', board: 3 },
+    enemies: [NB(300, 76), NB(340, 184)],
+    exitTo: 2,
+    backTo: 0,
+  },
+
+  // ---------- Room 3: the nest ----------
+  {
+    id: 'b3r3',
+    name: 'Heap',
+    tiles: shell({ right: true, left: true }),
+    spawn: { x: 60, y: 128 },
+    spawnBack: { x: 420, y: 128 },
+    mood: { fog: 0.36, vignette: 1.1, ambient: '#1a3526' },
+    floor: 'digital',
+    props: [
+      // 2x2, so its box is 16 either way and it sits on a tile corner
+      { type: 'nullbyteNest', x: 240, y: 128 },
+      { type: 'torch', x: 80,  y: 40 },
+      { type: 'torch', x: 400, y: 40 },
+      { type: 'torch', x: 80,  y: 216 },
+      { type: 'torch', x: 400, y: 216 },
+      { type: 'torch', x: 24,  y: 128 },
+    ],
+    gate: { tx: 28, ty: 7, kind: 'error', board: 4 },
+    enemies: [NB(340, 80), NB(340, 176)],
+    exitTo: 3,
+    backTo: 1,
+  },
+
+  // ---------- Room 4: the last corridor ----------
+  {
+    id: 'b3r4',
+    name: 'Kernel Space',
+    tiles: shell({ right: true, left: true }),
+    spawn: { x: 60, y: 128 },
+    spawnBack: { x: 420, y: 128 },
+    mood: { fog: 0.4, vignette: 1.12, ambient: '#173021' },
+    floor: 'digital',
+    props: [
+      { type: 'torch', x: 104, y: 40 },
+      { type: 'torch', x: 248, y: 40 },
+      { type: 'torch', x: 392, y: 40 },
+      { type: 'torch', x: 104, y: 216 },
+      { type: 'torch', x: 248, y: 216 },
+      { type: 'torch', x: 392, y: 216 },
+    ],
+    gate: { tx: 28, ty: 7, kind: 'error', board: 4 },
+    enemies: [NB(240, 68), NB(300, 128), NB(240, 188), NB(390, 128)],
+    exitTo: 4,
+    backTo: 2,
+  },
+
+  // ---------- Room 5: The Kernel ----------
+  {
+    id: 'b3r5',
+    name: 'The Kernel',
+    tiles: SHELL([
+      '##############################',
+      '##############################',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      'BB...........................#',
+      'BB...........................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '#............................#',
+      '##############################',
+      '##############################',
+    ]),
+    spawn: { x: 64, y: 128 },
+    spawnBack: { x: 64, y: 128 },
+    mood: { fog: 0.3, vignette: 1.18, ambient: '#142c1d' },
+    floor: 'digital',
+    props: [
+      { type: 'torch', x: 24,  y: 40  },
+      { type: 'torch', x: 24,  y: 216 },
+      { type: 'torch', x: 456, y: 40  },
+      { type: 'torch', x: 456, y: 216 },
+    ],
+    gate: null,
+    enemies: [{ type: 'kernel', x: 300, y: 128 }],
+    exitTo: null,
+    backTo: 3,
+  },
+];
+
 /**
  * The shelf. `needs` is the book you must finish before the chains come off —
  * book two expects you to arrive carrying the sword book one taught you to
- * make. Book three has no rooms yet, so it stays sealed no matter what.
+ * make. `needsDepth` is book three's second lock: it also wants you to have got
+ * ten rooms deep into the dungeon, so it opens to someone who has both finished
+ * a story and survived something that has no ending.
  */
 export const BOOKS = [
   { id: 0, title: 'Greedy Ass Dragon', rooms: BOOK1_ROOMS },
   { id: 1, title: 'Underwater Mommy', rooms: BOOK2_ROOMS, needs: 0 },
-  { id: 2, title: '???', rooms: null },
+  { id: 2, title: 'Digital Matrix', rooms: BOOK3_ROOMS, needs: 1, needsDepth: 10 },
   // Book four has no rooms table because its rooms do not exist until you walk
   // into them. `infinite` is what tells the rest of the game the difference
   // between "not written yet" and "never ends".

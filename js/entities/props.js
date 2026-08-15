@@ -23,6 +23,7 @@ const S = {
   merchant0: decode(MERCHANT.idle[0], 'merchant0'),
   merchant1: decode(MERCHANT.idle[1], 'merchant1'),
   nest: decode(NEST.block[0], 'nestBlock'),
+  nullbyteNest: decode(BLOCKS.nullbyteNest[0], 'nullbyteNest'),
 };
 
 export class Prop {
@@ -45,6 +46,8 @@ export class Prop {
       // movement turns the room into a maze nobody asked for
       kelp:      [0, 0,  false, null],
       merchant:  [7, 7,  true,  'Merchant'],
+      // two tiles by two, so its box is a full 16 either way
+      nullbyteNest: [16, 16, true, 'Nullbyte Nest'],
       // The portal is walked into, not walked around — it is the only way out
       // of the dungeon and it must never be something you can get stuck behind.
       portal:    [0, 0,  false, 'Portal'],
@@ -80,6 +83,13 @@ export class Prop {
     // no on-screen prompt telling you when you are in range, a tight radius
     // reads as "E is broken" rather than "stand closer".
     this.reach = type === 'shelf' ? 34 : (type === 'portal' ? 30 : 26);
+
+    // A nest holds four summons and a ten second wait between them. Both are
+    // drawn on the block itself, so you never have to guess what is left.
+    if (type === 'nullbyteNest') {
+      this.charges = 4;
+      this.cool = 0;
+    }
   }
 
   update(dt, room) {
@@ -141,6 +151,18 @@ export class Prop {
       });
     }
 
+    if (this.type === 'nullbyteNest') {
+      this.cool = Math.max(0, this.cool - dt);
+      if (this.charges > 0 && Math.random() > 0.9) {
+        P.spawn({
+          x: this.x + (Math.random() - 0.5) * 26, y: this.y + 12,
+          vx: 0, vy: -12 - Math.random() * 10,
+          life: 0.7, size: 1, colour: Math.random() > 0.5 ? '#26c247' : '#5cff7a',
+          drag: 0.97, glow: 6, glowColour: 'rgba(38,194,71,ALPHA)',
+        });
+      }
+    }
+
     if (this.type === 'smelter' && room?.smelter?.burning) {
       if (Math.random() > 0.7) {
         P.spawn({
@@ -168,6 +190,7 @@ export class Prop {
       case 'torch':   return Math.floor(this.t * 6.5) % 2 ? S.torch1 : S.torch0;
       case 'merchant': return Math.floor(this.t * 1.4) % 2 ? S.merchant1 : S.merchant0;
       case 'nest':    return S.nest;
+      case 'nullbyteNest': return S.nullbyteNest;
     }
     return S.anvil;
   }
@@ -186,6 +209,26 @@ export class Prop {
     }
 
     draw(ctx, spr, this.x, this.y, { scale: this.scale });
+
+    // four charge lights across the top of the nest, and the recharge ring
+    if (this.type === 'nullbyteNest') {
+      const x0 = Math.round(this.x) - 12, y0 = Math.round(this.y) - 20;
+      for (let i = 0; i < 4; i++) {
+        ctx.fillStyle = i < this.charges ? '#5cff7a' : '#0a3d17';
+        ctx.fillRect(x0 + i * 7, y0, 5, 3);
+      }
+      if (this.cool > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = 'rgba(38,194,71,0.7)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, 19, -Math.PI / 2,
+          -Math.PI / 2 + (1 - this.cool / 10) * Math.PI * 2);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
 
     // gold glints on the coin piles
     if (this.type === 'coinPile') {
@@ -282,6 +325,10 @@ export class Prop {
         addLight(ctx, this.x, this.y - 5, 92 * f, 'rgba(255,152,58,ALPHA)', 0.85 * f);
         break;
       }
+      case 'nullbyteNest':
+        addLight(ctx, this.x, this.y, 46, 'rgba(38,194,71,ALPHA)',
+          this.charges > 0 ? 0.5 : 0.16);
+        break;
       case 'smelter': {
         if (room?.smelter?.burning) {
           const flick = 0.92 + Math.sin(this.t * 5.1) * 0.05 + Math.sin(this.t * 12.9) * 0.03;

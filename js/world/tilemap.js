@@ -75,6 +75,39 @@ export class TileMap {
     const wood = this.floorStyle === 'wood';
     const water = this.floorStyle === 'water';
     const crypt = this.floorStyle === 'crypt';
+    const digital = this.floorStyle === 'digital';
+
+    if (digital) {
+      // A dark grid with a scan line crawling down it, and the odd tile holding
+      // a bit that flickers. Deterministic per tile — a value re-rolled every
+      // frame at 60Hz is a strobe, not a flicker.
+      const n = hash(tx, ty, 5);
+      x.fillStyle = n > 0.5 ? '#1b3a26' : '#1e4029';
+      x.fillRect(px, py, TILE, TILE);
+      // Traces along the tile edges, kept faint. At half opacity this was a
+      // bright grid over the whole screen and the walls disappeared into it.
+      x.fillStyle = 'rgba(10,61,23,0.55)';
+      x.fillRect(px, py, TILE, 1);
+      x.fillRect(px, py, 1, TILE);
+      // pads where traces cross
+      if (n > 0.93) {
+        x.fillStyle = 'rgba(38,194,71,0.4)';
+        x.fillRect(px + 6, py + 6, 3, 3);
+      }
+      // A stray bit printed into the floor — RARE. At one tile in eleven this
+      // read as confetti, the same way the crypt's bone litter once did.
+      if (n < 0.022) {
+        x.fillStyle = 'rgba(92,255,122,0.34)';
+        if (n < 0.011) { x.fillRect(px + 7, py + 4, 2, 8); }
+        else {
+          x.fillRect(px + 5, py + 4, 6, 2);
+          x.fillRect(px + 5, py + 4, 2, 8);
+          x.fillRect(px + 5, py + 10, 6, 2);
+          x.fillRect(px + 9, py + 4, 2, 8);
+        }
+      }
+      return;
+    }
     const n = hash(tx, ty, 1);
 
     if (crypt) {
@@ -203,12 +236,61 @@ export class TileMap {
     const n = hash(tx, ty, 2);
     const wet = this.floorStyle === 'water';
     const crypt = this.floorStyle === 'crypt';
+    const digital = this.floorStyle === 'digital';
+
+    if (digital) {
+      // A dark grid with a scan line crawling down it, and the odd tile holding
+      // a bit that flickers. Deterministic per tile — a value re-rolled every
+      // frame at 60Hz is a strobe, not a flicker.
+      const n = hash(tx, ty, 5);
+      x.fillStyle = n > 0.5 ? '#1b3a26' : '#1e4029';
+      x.fillRect(px, py, TILE, TILE);
+      // Traces along the tile edges, kept faint. At half opacity this was a
+      // bright grid over the whole screen and the walls disappeared into it.
+      x.fillStyle = 'rgba(10,61,23,0.55)';
+      x.fillRect(px, py, TILE, 1);
+      x.fillRect(px, py, 1, TILE);
+      // pads where traces cross
+      if (n > 0.93) {
+        x.fillStyle = 'rgba(38,194,71,0.4)';
+        x.fillRect(px + 6, py + 6, 3, 3);
+      }
+      // A stray bit printed into the floor — RARE. At one tile in eleven this
+      // read as confetti, the same way the crypt's bone litter once did.
+      if (n < 0.022) {
+        x.fillStyle = 'rgba(92,255,122,0.34)';
+        if (n < 0.011) { x.fillRect(px + 7, py + 4, 2, 8); }
+        else {
+          x.fillRect(px + 5, py + 4, 6, 2);
+          x.fillRect(px + 5, py + 4, 2, 8);
+          x.fillRect(px + 5, py + 10, 6, 2);
+          x.fillRect(px + 9, py + 4, 2, 8);
+        }
+      }
+      return;
+    }
 
     // Base block, deliberately far darker than the floor. Without a clear
     // value gap between wall and floor the room has no readable architecture —
     // it just looks like one flat texture with props sitting on it.
-    x.fillStyle = ['#100d19', '#141020', '#0d0a15'][((tx * 5 + ty * 3) >>> 0) % 3];
+    // Book three's walls are machine casing, not stone: a colder, bluer black
+    // than its green-black floor, so the boundary is a change of material and
+    // not just a change of brightness. Matched values read as one surface.
+    x.fillStyle = this.floorStyle === 'digital'
+      ? ['#0a1420', '#0c1826', '#08111c'][((tx * 5 + ty * 3) >>> 0) % 3]
+      : ['#100d19', '#141020', '#0d0a15'][((tx * 5 + ty * 3) >>> 0) % 3];
     x.fillRect(px, py, TILE, TILE);
+
+    if (this.floorStyle === 'digital') {
+      // bus lines across the casing
+      x.fillStyle = 'rgba(38,194,71,0.1)';
+      x.fillRect(px, py + 4, TILE, 1);
+      x.fillRect(px, py + 11, TILE, 1);
+      if (hash(tx, ty, 6) > 0.8) {
+        x.fillStyle = 'rgba(38,194,71,0.35)';
+        x.fillRect(px + 5, py + 3, 3, 3);
+      }
+    }
 
     // brick courses, offset every other row
     const off = (ty % 2) * 8;
@@ -239,9 +321,11 @@ export class TileMap {
     // sells the wall as a vertical surface rather than a dark floor tile. The
     // per-tile jitter keeps it from looking like a ruled line.
     if (openBelow) {
-      x.fillStyle = wet ? '#1c4351' : (crypt ? '#332845' : '#3b3050');
+      const dig = this.floorStyle === 'digital';
+      x.fillStyle = wet ? '#1c4351' : dig ? '#0a3d17' : (crypt ? '#332845' : '#3b3050');
+      if (dig) x.fillStyle = '#0a3d17';
       x.fillRect(px, py + TILE - 3, TILE, 3);
-      x.fillStyle = wet ? '#2d6879' : (crypt ? '#584573' : '#5b4a76');
+      x.fillStyle = wet ? '#2d6879' : dig ? '#26c247' : (crypt ? '#584573' : '#5b4a76');
       x.fillRect(px, py + TILE - 3, TILE, 1);
       if (n > 0.45) {
         x.fillStyle = wet ? 'rgba(112,218,212,0.42)' : 'rgba(140,118,175,0.5)';
@@ -258,7 +342,9 @@ export class TileMap {
     // ever show their bottom edge, so the lip alone was enough for them — but a
     // free-standing pillar shows all four, and with only the bottom one lit it
     // read as a ledge painted on the floor rather than a block standing on it.
-    const edge = wet ? 'rgba(112,218,212,' : 'rgba(150,126,188,';
+    const edge = wet ? 'rgba(112,218,212,'
+      : this.floorStyle === 'digital' ? 'rgba(38,194,71,'
+      : 'rgba(150,126,188,';
     if (!this.solidAt(tx, ty - 1)) {
       x.fillStyle = edge + '0.3)';
       x.fillRect(px, py, TILE, 1);
