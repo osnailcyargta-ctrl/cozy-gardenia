@@ -162,10 +162,13 @@ export function refreshAnvil() {
 
   // A coupon is spent before coins are, and says so on the button.
   const coupons = inv.count('reforge_coupon');
-  reforgeBtn.disabled = !held || (coupons < 1 && coins < REFORGE_COST);
+  const forgeable = held && !ITEM_DEFS[held.id]?.weapon?.tool;
+  reforgeBtn.disabled = !forgeable || (coupons < 1 && coins < REFORGE_COST);
   reforgeBtn.textContent = coupons > 0 ? `Reforge · free (${coupons})` : `Reforge · ${REFORGE_COST}c`;
 
-  if (!held) {
+  if (held && !forgeable) {
+    info.textContent = `${ITEM_DEFS[held.id].name} is not a weapon.`;
+  } else if (!held) {
     info.textContent = 'Hold a weapon to reforge it.';
     info.style.color = '';
   } else {
@@ -216,6 +219,14 @@ function onReforge() {
   const inv = game.inventory;
   const held = heldWeapon();
   if (!held) { sfx.denied(); return; }
+  // A tool has nothing an anvil can change.
+  if (ITEM_DEFS[held.id]?.weapon?.tool) {
+    anvilMsg.textContent = `${ITEM_DEFS[held.id].name} is not a weapon.`;
+    anvilMsg.className = 'err';
+    anvilMsg.style.color = '';
+    sfx.denied();
+    return;
+  }
   const hasCoupon = inv.count('reforge_coupon') > 0;
   if (!hasCoupon && inv.count('gold_coin') < REFORGE_COST) {
     anvilMsg.textContent = `Reforging costs ${REFORGE_COST} coins.`;

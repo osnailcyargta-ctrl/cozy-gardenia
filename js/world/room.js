@@ -137,6 +137,7 @@ export class Room {
     this.map = new TileMap(def.tiles, def.floor);
     this.map.bake();
     this.mood = def.mood || {};
+    this.dungeon = !!def.dungeon;
 
     this.props = (def.props || []).map((p) => new Prop(p.type, p.x, p.y, p));
     this.gate = def.gate ? new Gate(def.gate) : null;
@@ -146,6 +147,7 @@ export class Room {
     this.holes = [];      // and what they throw
     this.claw = null;     // the one thrown hand, if there is one
     this.portal = null;   // and the one doorway, if there is one
+    this.chain = null;    // and the one chain, while it is swinging
     this.cleared = false;
     this.enteredT = 0;
     // Set the first time you walk in. Somewhere new is worth three hearts;
@@ -277,6 +279,10 @@ export class Room {
         if (e instanceof Nullbyte && Math.random() < 0.02) {
           this.addDrop('digital_claw_cannon', e.x, e.y);
         }
+        // And one in a hundred of anything at all, down in the dungeon.
+        if (this.dungeon && Math.random() < 0.01) {
+          this.addDrop('chain_hook', e.x, e.y);
+        }
         if (e.keyId) this.addDrop(e.keyId, e.x, e.y);
 
         // Book four locks the way on instead of on a particular monster: the
@@ -402,6 +408,7 @@ export class Room {
     for (const w of this.waves) w.draw(ctx);
     this.claw?.draw(ctx);
     this.portal?.draw(ctx);
+    this.chain?.draw(ctx);
     for (const h of this.holes) h.draw(ctx);
   }
 
@@ -415,6 +422,7 @@ export class Room {
     for (const w of this.waves) w.drawLight(ctx);
     this.claw?.drawLight(ctx);
     this.portal?.drawLight(ctx);
+    this.chain?.drawLight(ctx);
     for (const n of this.nests) addLight(ctx, n.x, n.y, 40 + n.charge * 26, 'rgba(168,102,224,ALPHA)', 0.4 + n.pulse * 0.5);
     // last, so the holes can eat the light everything else just added
     for (const h of this.holes) h.drawLight(ctx);

@@ -287,6 +287,7 @@ export function makeRoom(runSeed, depth) {
     backTo: null,
     milestone,
     boss,
+    dungeon: true,
     statMul,
   };
 }

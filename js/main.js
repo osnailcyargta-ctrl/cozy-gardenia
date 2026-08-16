@@ -31,8 +31,10 @@ import * as shopUI from './ui/shopUI.js';
 import * as devUI from './ui/devUI.js';
 import * as puzzleUI from './ui/puzzleUI.js';
 import * as portalUI from './ui/portalUI.js';
+import * as voidUI from './ui/voidUI.js';
 import { Portal, tileCentre } from './entities/portalgun.js';
 import { Claw } from './entities/claw.js';
+import { ChainHook } from './entities/chainhook.js';
 import { Prop } from './entities/props.js';
 import * as rates from './world/spawnrates.js';
 import { CORRUPT_BITE, CORRUPT_FLOOR } from './entities/nullbyte.js';
@@ -119,6 +121,7 @@ shopUI.init(game);
 devUI.init(game);
 puzzleUI.init(game);
 portalUI.init(game);
+voidUI.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
@@ -452,6 +455,19 @@ function loadRateOverride() {
  */
 function openPortalHere() {
   const p = game.player, room = game.room;
+  if (room.chain) {
+    room.chain.update(dt, {
+      player: p,
+      enemies: room.enemies.filter((e) => !e.dead),
+      map: room.map,
+      aimX: input.mouse.x, aimY: input.mouse.y,
+      // holding is the whole input for this weapon: every stage of it asks
+      // whether the button is still down
+      held: input.mouse.down && p.weapon.kind === 'chain' && !p.dead,
+    });
+    if (room.chain.dead) room.chain = null;
+  }
+
   if (room.portal) { room.portal.dead = true; room.portal = null; }
   const a = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
   const px = p.x + Math.cos(a) * 22;
@@ -623,7 +639,7 @@ function fadeThen(fn) {
 
 function anyPopupOpen() {
   return invUI.isOpen() || craftUI.smelterOpen() || craftUI.anvilOpen() || shelfUI.isOpen()
-    || shopUI.isOpen() || devUI.isOpen() || puzzleUI.isOpen() || portalUI.isOpen()
+    || shopUI.isOpen() || devUI.isOpen() || puzzleUI.isOpen() || portalUI.isOpen() || voidUI.isOpen()
     || !deathScreen.classList.contains('hidden')
     || !resetScreen.classList.contains('hidden');
 }
@@ -633,6 +649,7 @@ function closeAllPopups() {
   devUI.close();
   puzzleUI.close();
   portalUI.close();
+  voidUI.close();
   shopUI.close();
   invUI.close();
   craftUI.closeSmelter();
@@ -696,6 +713,9 @@ function doInteract(prop) {
       return throwLever(prop);
     case 'nullbyteNest':
       return summonFromNest(prop);
+    case 'void':
+      voidUI.open();
+      return true;
     case 'portal':
       goToLibrary();
       return true;
@@ -1034,7 +1054,9 @@ function update(dt) {
       const angle = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
       if (p.weapon.kind === 'claw' && p.clawMode === 2) throwClaw();
       else if (p.weapon.kind === 'portal') openPortalHere();
-      else p.startAttack(angle);
+      else if (p.weapon.kind === 'chain') {
+        if (!room.chain) room.chain = new ChainHook(p);
+      } else p.startAttack(angle);
     }
     if (p.attacking && !p.swungThisAttack && p.attackT < 0.13) {
       p.swungThisAttack = true;
@@ -1067,6 +1089,19 @@ function update(dt) {
   // is ~126 bytes and a full write costs 0.01ms, which is a tenth of one percent
   // of a 60fps frame — far below anything that could cost a frame.
   autosave();
+
+  if (room.chain) {
+    room.chain.update(dt, {
+      player: p,
+      enemies: room.enemies.filter((e) => !e.dead),
+      map: room.map,
+      aimX: input.mouse.x, aimY: input.mouse.y,
+      // holding is the whole input for this weapon: every stage of it asks
+      // whether the button is still down
+      held: input.mouse.down && p.weapon.kind === 'chain' && !p.dead,
+    });
+    if (room.chain.dead) room.chain = null;
+  }
 
   if (room.portal) {
     if (room.portal.update(dt, p)) { takePortal(room.portal.dest); return; }

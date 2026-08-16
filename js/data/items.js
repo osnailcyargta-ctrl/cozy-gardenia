@@ -43,10 +43,24 @@ export const ITEM_DEFS = {
   portal_gun: {
     id: 'portal_gun', name: 'Portal Gun', stack: 1,
     desc: 'Opens a way into any book you have finished',
+    // A tool, not a weapon. It deals nothing, swings at nothing, and an anvil
+    // has no idea what to do with it — `tool` is what says so, and everything
+    // that treats a `weapon` block as a thing you fight with checks it.
     weapon: {
-      kind: 'portal', name: 'Portal Gun',
-      damage: 4, range: 24, arc: 1.4,
+      kind: 'portal', name: 'Portal Gun', tool: true,
+      damage: 0, range: 0, arc: 0,
       swing: 0.2, cooldown: 0.5,
+    },
+  },
+
+  chain_hook: {
+    id: 'chain_hook', name: 'Chain Hook', stack: 1,
+    desc: 'Hold to whirl · hold longer to throw · catch and slam',
+    weapon: {
+      kind: 'chain', name: 'Chain Hook',
+      damage: 10, range: 32, arc: 1.6,
+      swing: 0.2, cooldown: 0.35,
+      slamDamage: 20,
     },
   },
 

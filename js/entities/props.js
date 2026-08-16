@@ -49,8 +49,8 @@ export class Prop {
       // two tiles by two, so its box is a full 16 either way
       nullbyteNest: [16, 16, true, 'Nullbyte Nest'],
       // A hole punched through the floor. Solid like a chest or an anvil — you
-      // walk around it, never through it — and nothing to interact with.
-      void:      [7, 7,  true,  null],
+      // walk around it, never through it — and it will take one thing off you.
+      void:      [7, 7,  true,  'Void'],
       // Bolted to the wall above the first gate. Not solid — it is above head
       // height — but you can reach it and throw it.
       lever:     [6, 8,  false, 'Difficulty'],

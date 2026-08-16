@@ -67,7 +67,9 @@ export const REFORGE_COST = 20;
  */
 export function applyMod(base, mod) {
   const m = MODS[mod];
-  if (!base || !m) return base;
+  // A tool has no numbers for a modifier to scale, and scaling zero damage by
+  // 1.35 is still zero — but it would also hang a modifier name on it.
+  if (!base || !m || base.tool) return base;
   return {
     ...base,
     damage: Math.max(1, Math.round(base.damage * m.damage)),
@@ -87,6 +89,7 @@ export function applyMod(base, mod) {
 export function statLine(base, mod) {
   const w = applyMod(base, mod);
   if (!w) return '';
+  if (w.tool) return '';
   const parts = [];
   if (w.damage) parts.push(`${w.damage} dmg`);
   // Swings a second, rather than the raw cooldown — "0.277s" means nothing at a

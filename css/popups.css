@@ -691,3 +691,35 @@
 /* Slots lift very slightly under the cursor instead of jumping colour. */
 .slot { transition: transform 0.12s cubic-bezier(0.22,0.61,0.36,1), border-color 0.12s ease; }
 .slot:hover { transform: translateY(-1px); }
+
+/* ---------- what the void takes ---------- */
+.void-panel { min-width: 280px; }
+.void-panel h2 { color: #8fe0a0; }
+.void-list {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #0a3d17;
+  border-radius: 3px;
+  background: #04100b;
+}
+.void-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 9px;
+  cursor: pointer;
+  border-bottom: 1px solid #08240f;
+  transition: background 0.1s ease, transform 0.1s ease;
+}
+.void-row:last-child { border-bottom: none; }
+.void-row:hover { background: #0b2b14; transform: translateX(2px); }
+.void-row canvas { image-rendering: pixelated; }
+.void-name { flex: 1; color: #cbe6d2; font-size: 12px; }
+.void-count { color: #4f9e63; font-size: 11px; }
+.void-note {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 11px;
+  color: #4f9e63;
+  letter-spacing: 0.04em;
+}

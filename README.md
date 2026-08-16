@@ -118,7 +118,8 @@ lives on the weapon (`swing`), so no other weapon was slowed by adding it.
 
 ### The Portal Gun
 
-The Kernel leaves one behind. Left click puts a portal on the floor and asks for four numbers:
+The Kernel leaves one behind. It is a **tool, not a weapon** — it deals nothing, and an anvil will
+tell you so rather than take your coins. Left click puts a portal on the floor and asks for four numbers:
 
 ```
 1 3 0 0     →  book 1, room 3, dead centre of the room
@@ -132,6 +133,29 @@ down**: `0 -2` is two tiles below the middle, `0 2` is two above it.
 
 You can only aim at a book you have finished, and it refuses a tile that is off the map or solid,
 because that would be a hole you could not climb out of.
+
+### The Chain Hook
+
+One in a hundred of anything you kill in the dungeon leaves one. It is the only weapon in the game
+where letting go early is a decision rather than a mistake.
+
+| | |
+|---|---|
+| **Hold** | the chain whirls around you at two tiles, hitting once per pass for **10** |
+| **Keep holding past 2s** | it launches at the cursor, no range limit |
+| **On a catch** | **10**, and it drags the thing back to your feet |
+| **Still holding** | you spin what you caught for a second |
+| **Let go** | it flies at the cursor and takes **20** more when it lands, hard |
+
+A throw that only finds a wall cancels the whole attack — that is what missing costs. The throw
+launches along the line from you to the cursor rather than continuing from wherever the orbit happened
+to stop, because continuing from the orbit put the head up to two tiles off the line you were aiming
+down and read as the weapon simply not working.
+
+### The void will take something
+
+Point at a void in book three and it opens your satchel. Click a stack and it goes — all of it, no
+confirmation, no way back. It is a hole.
 
 ### Hard mode
 
