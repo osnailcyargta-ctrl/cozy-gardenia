@@ -34,12 +34,13 @@ const DEBRIS = {
 const SEALED = (kind) => kind === 'locked' || kind === 'error';
 
 export class Gate {
-  constructor({ tx, ty, kind, hp = 12, keyId = 'key', theme = 'wood', board = 3 }) {
+  constructor({ tx, ty, kind, hp = 12, keyId = 'key', theme = 'wood', tier = 0 }) {
     this.tx = tx; this.ty = ty;
     this.kind = kind;
     this.keyId = keyId;
-    // How big the sliding board behind an errored gate is: 3 or 4 a side.
-    this.board = board;
+    // Which tier of board sits behind an errored gate — how many walls, and how
+    // long the shortest route through them has to be.
+    this.tier = tier;
     // a locked gate still needs to look like it belongs to its book
     this.theme = kind === 'locked' ? theme : kind;
     this.maxHp = hp;

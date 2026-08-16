@@ -1,15 +1,10 @@
-// The DEFRAG board.
+// The board panel.
 //
-// An errored gate is a picture of a circuit that has been shuffled. Click a tile
-// next to the hole to slide it in; put the picture back together and the gate
-// opens. Rooms one and two are 3×3, three and four are 4×4.
-//
-// The tiles are slices of one image rather than numbers, because a sliding
-// puzzle is only readable when the edges of neighbouring tiles line up — a grid
-// of digits gives you nothing to recognise a near-solution by.
+// Five by five. Hold anywhere on the grid and drag: the block steps one square
+// per swipe, and a long drag keeps stepping as you go rather than making you
+// let go and grab again for every square. Arrow keys and WASD do the same thing,
+// for anyone who would rather not drag.
 
-import { PAL } from '../data/palette.js';
-import { BOARD } from '../data/sprites.js';
 import { sfx } from '../engine/audio.js';
 import * as puzzle from '../systems/puzzle.js';
 
@@ -19,98 +14,112 @@ const gridEl = document.getElementById('puzzle-grid');
 const noteEl = document.getElementById('puzzle-note');
 
 let game = null;
-let gate = null;          // the gate this board belongs to
-let cells = null;
-let n = 3;
-let moves = 0;
+let gate = null;
+let board = null;
 
-export function init(g) { game = g; }
+/** How far you have to drag before it counts as one swipe. */
+const SWIPE = 28;
+
+let dragging = false;
+let ox = 0, oy = 0;
+
+export function init(g) {
+  game = g;
+
+  gridEl.addEventListener('pointerdown', (e) => {
+    if (!board || board.done) return;
+    dragging = true;
+    ox = e.clientX; oy = e.clientY;
+    gridEl.setPointerCapture(e.pointerId);
+  });
+
+  gridEl.addEventListener('pointermove', (e) => {
+    if (!dragging || !board || board.done) return;
+    const dx = e.clientX - ox, dy = e.clientY - oy;
+    if (Math.abs(dx) < SWIPE && Math.abs(dy) < SWIPE) return;
+    // dominant axis only — a diagonal drag should not move the block twice
+    if (Math.abs(dx) > Math.abs(dy)) {
+      push(Math.sign(dx), 0);
+      ox = e.clientX; oy = e.clientY;
+    } else {
+      push(0, Math.sign(dy));
+      ox = e.clientX; oy = e.clientY;
+    }
+  });
+
+  const stop = (e) => {
+    dragging = false;
+    if (e.pointerId !== undefined && gridEl.hasPointerCapture?.(e.pointerId)) {
+      gridEl.releasePointerCapture(e.pointerId);
+    }
+  };
+  gridEl.addEventListener('pointerup', stop);
+  gridEl.addEventListener('pointercancel', stop);
+
+  window.addEventListener('keydown', (e) => {
+    if (!isOpen() || !board || board.done) return;
+    const d = {
+      ArrowRight: [1, 0], KeyD: [1, 0],
+      ArrowLeft: [-1, 0], KeyA: [-1, 0],
+      ArrowDown: [0, 1], KeyS: [0, 1],
+      ArrowUp: [0, -1], KeyW: [0, -1],
+    }[e.code];
+    if (!d) return;
+    e.preventDefault();
+    push(d[0], d[1]);
+  });
+}
 
 export function isOpen() { return !popup.classList.contains('hidden'); }
-export function close() { popup.classList.add('hidden'); gate = null; }
-
-/** Paint the whole source image once, so tiles can be cut out of it. */
-const SOURCE = (() => {
-  const rows = BOARD.circuit[0];
-  const c = document.createElement('canvas');
-  c.width = rows[0].length;
-  c.height = rows.length;
-  const x = c.getContext('2d');
-  rows.forEach((r, y) => [...r].forEach((ch, cx) => {
-    const col = PAL[ch];
-    if (!col || ch === '.') return;
-    x.fillStyle = col;
-    x.fillRect(cx, y, 1, 1);
-  }));
-  return c;
-})();
-
-const CELL = 64;
+export function close() { popup.classList.add('hidden'); gate = null; board = null; dragging = false; }
 
 /**
- * The board lives on the gate, not here, so walking away mid-puzzle and coming
- * back finds it exactly as you left it — and so a gate you already solved stays
- * solved without anyone having to remember that separately.
+ * The board lives on the gate, so walking away mid-puzzle and coming back finds
+ * it exactly as you left it, and a gate you already opened stays open without
+ * anyone having to remember that separately.
  */
 export function open(g) {
   gate = g;
-  n = g.board || 3;
-  if (!g.cells) {
-    g.cells = puzzle.scramble(n);
-    g.moves = 0;
-  }
-  cells = g.cells;
-  moves = g.moves || 0;
+  if (!g.cells) g.cells = puzzle.generate(g.tier ?? 0);
+  board = g.cells;
   popup.classList.remove('hidden');
   sfx.uiBig();
   build();
 }
 
-function build() {
-  titleEl.textContent = `Defragment ${n}×${n}`;
-  gridEl.innerHTML = '';
-  gridEl.style.gridTemplateColumns = `repeat(${n}, ${CELL}px)`;
+/** Exposed so the tests can drive a real swipe without faking pointer events. */
+export function push(dx, dy) {
+  if (!board || board.done) return 'done';
+  const r = puzzle.step(board, dx, dy);
+  if (r === 'blocked') { sfx.denied(); return r; }
 
-  cells.forEach((tile, i) => {
-    const el = document.createElement('div');
-    el.className = 'pz-cell' + (tile === null ? ' hole' : '');
-    if (tile !== null) {
-      const c = document.createElement('canvas');
-      c.width = CELL; c.height = CELL;
-      const x = c.getContext('2d');
-      x.imageSmoothingEnabled = false;
-      // which slice of the source picture this tile is
-      const sw = SOURCE.width / n, sh = SOURCE.height / n;
-      const sx = (tile % n) * sw, sy = ((tile / n) | 0) * sh;
-      x.drawImage(SOURCE, sx, sy, sw, sh, 0, 0, CELL, CELL);
-      el.appendChild(c);
-      // a tile that is already home reads as settled
-      if (tile === i) el.classList.add('home');
-    }
-    el.addEventListener('click', () => onCell(i));
-    gridEl.appendChild(el);
-  });
-
-  const left = cells.filter((t, i) => t !== null && t !== i).length;
-  noteEl.textContent = puzzle.isSolved(cells)
-    ? 'Restored.'
-    : `${left} block${left === 1 ? '' : 's'} out of place · ${moves} move${moves === 1 ? '' : 's'}`;
-}
-
-function onCell(i) {
-  if (!gate || puzzle.isSolved(cells)) return;
-  if (!puzzle.slide(cells, n, i)) { sfx.denied(); return; }
-
-  moves++;
-  gate.moves = moves;
   sfx.ui();
   build();
 
-  if (puzzle.isSolved(cells)) {
+  if (r === 'done') {
     noteEl.textContent = 'Restored.';
     gate.unlock();
-    game.refreshInventory?.();
-    // a beat to see the picture whole before the panel goes
-    setTimeout(() => { if (isOpen()) close(); }, 700);
+    // a beat to see it land before the panel goes
+    setTimeout(() => { if (isOpen()) close(); }, 650);
   }
+  return r;
+}
+
+function build() {
+  titleEl.textContent = 'Defragment';
+  gridEl.innerHTML = '';
+  gridEl.style.gridTemplateColumns = `repeat(${puzzle.N}, 56px)`;
+
+  for (let c = 0; c < puzzle.N * puzzle.N; c++) {
+    const el = document.createElement('div');
+    el.className = 'pz-cell';
+    if (board.walls[c]) el.classList.add('wall');
+    if (c === board.hole) el.classList.add('hole');
+    if (c === board.block) el.classList.add('block');
+    gridEl.appendChild(el);
+  }
+
+  noteEl.textContent = board.done
+    ? 'Restored.'
+    : `Swipe the block into the void · ${board.moves} move${board.moves === 1 ? '' : 's'}`;
 }

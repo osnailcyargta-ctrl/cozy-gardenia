@@ -48,6 +48,9 @@ export class Prop {
       merchant:  [7, 7,  true,  'Merchant'],
       // two tiles by two, so its box is a full 16 either way
       nullbyteNest: [16, 16, true, 'Nullbyte Nest'],
+      // A hole punched through the floor. Solid like a chest or an anvil — you
+      // walk around it, never through it — and nothing to interact with.
+      void:      [7, 7,  true,  null],
       // The portal is walked into, not walked around — it is the only way out
       // of the dungeon and it must never be something you can get stuck behind.
       portal:    [0, 0,  false, 'Portal'],
@@ -89,6 +92,14 @@ export class Prop {
     if (type === 'nullbyteNest') {
       this.charges = 4;
       this.cool = 0;
+    }
+
+    // The void corrupts anything standing in the 3x3 of tiles around it, once
+    // every 1.5s. Its own clock, so two voids never share a timer.
+    if (type === 'void') {
+      this.bite = 0;
+      this.digits = [];
+      this.seed = Math.random() * 100;
     }
   }
 
@@ -151,6 +162,22 @@ export class Prop {
       });
     }
 
+    if (this.type === 'void') {
+      this.bite = Math.max(0, this.bite - dt);
+      // a column of ones and zeroes rising out of the hole
+      if (Math.random() > 0.72) {
+        this.digits.push({
+          x: (Math.random() - 0.5) * 13,
+          y: 4,
+          ch: Math.random() > 0.5 ? '1' : '0',
+          life: 0.9 + Math.random() * 0.7,
+          sp: 16 + Math.random() * 16,
+        });
+      }
+      for (const d of this.digits) { d.y -= d.sp * dt; d.life -= dt; }
+      this.digits = this.digits.filter((d) => d.life > 0);
+    }
+
     if (this.type === 'nullbyteNest') {
       this.cool = Math.max(0, this.cool - dt);
       if (this.charges > 0 && Math.random() > 0.9) {
@@ -197,6 +224,7 @@ export class Prop {
 
   draw(ctx, room) {
     if (this.type === 'portal') { this.drawPortal(ctx); return; }
+    if (this.type === 'void') { this.drawVoid(ctx); return; }
 
     const spr = this.sprite(room);
 
@@ -252,6 +280,43 @@ export class Prop {
    * The way home. Drawn rather than spritetd: a ring of turning light reads as
    * a hole in the world in a way a 16x16 tile of purple never would.
    */
+  /**
+   * A piece of the book that has stopped rendering: flat black with a torn,
+   * flickering rim, and binary climbing out of it. Drawn rather than decoded
+   * because a hole is an absence — there is no art to put in it.
+   */
+  drawVoid(ctx) {
+    const x = Math.round(this.x), y = Math.round(this.y);
+
+    // the digits climb out from behind the hole
+    ctx.save();
+    ctx.font = '7px monospace';
+    ctx.textAlign = 'center';
+    for (const d of this.digits) {
+      ctx.fillStyle = `rgba(38,194,71,${Math.min(1, d.life) * 0.8})`;
+      ctx.fillText(d.ch, x + d.x, y + d.y);
+    }
+    ctx.restore();
+
+    // the hole itself — true black, no shading, so it reads as missing
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(x, y, 8, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // a torn rim that glitches: a handful of short bars around the edge
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2 + this.t * 0.6;
+      const r = 7 + Math.sin(this.t * 7 + i * 2 + this.seed) * 1.6;
+      const bright = (i + ((this.t * 6) | 0)) % 4 === 0;
+      ctx.fillStyle = bright ? 'rgba(200,255,212,0.85)' : 'rgba(18,122,44,0.6)';
+      ctx.fillRect(Math.round(x + Math.cos(a) * r) - 1, Math.round(y + Math.sin(a) * r * 0.9), 2, 1);
+    }
+    ctx.restore();
+  }
+
   drawPortal(ctx) {
     const t = this.t;
     const x = this.x, y = this.y;
@@ -328,6 +393,10 @@ export class Prop {
       case 'nullbyteNest':
         addLight(ctx, this.x, this.y, 46, 'rgba(38,194,71,ALPHA)',
           this.charges > 0 ? 0.5 : 0.16);
+        break;
+      case 'void':
+        // it does not light the room, it eats the light — a thin sour rim only
+        addLight(ctx, this.x, this.y, 16, 'rgba(38,194,71,ALPHA)', 0.3);
         break;
       case 'smelter': {
         if (room?.smelter?.burning) {

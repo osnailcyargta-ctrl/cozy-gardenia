@@ -39,6 +39,11 @@ export class Player {
     this.weapon = FIST;
     this.attackT = 0;
     this.cooldown = 0;
+    // Which face of a two-mode weapon is live. Only the claw has two; the
+    // number rides on the player so it survives swapping hotbar slots and
+    // walking between books.
+    this.clawMode = 1;
+    this.throwCool = 0;
     this.attackAngle = 0;
     this.swungThisAttack = false;
 
@@ -330,7 +335,47 @@ export class Player {
       draw(ctx, silhouette(spr, '#ffd9dd'), this.x, this.y - 1 + bob, { alpha: this.hurtFlash * 2.6 });
     }
 
+    if (this.weapon.kind === 'claw') this.drawClawHand(ctx);
     if (this.attacking) this.drawSwing(ctx);
+  }
+
+  /**
+   * The hand itself, when the claw is what you are holding. Drawn even when you
+   * are standing still — a weapon that only exists during its own swing never
+   * feels like something you are carrying.
+   */
+  drawClawHand(ctx) {
+    const side = this.flip ? -1 : 1;
+    const hx = Math.round(this.x + side * 5);
+    const hy = Math.round(this.y + 1);
+    const open = this.clawMode === 2;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    // three fingers, splayed wider in throw mode so the two read apart at a glance
+    for (let i = 0; i < 3; i++) {
+      const a = -Math.PI / 2 + (i - 1) * (open ? 0.85 : 0.5) + (side < 0 ? Math.PI : 0);
+      ctx.strokeStyle = i === 1 ? '#c8ffd4' : '#26c247';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx + Math.cos(a) * (open ? 4 : 3), hy + Math.sin(a) * (open ? 4 : 3));
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#031a08';
+    ctx.fillRect(hx - 1, hy - 1, 3, 3);
+    ctx.fillStyle = open ? '#5cff7a' : '#26c247';
+    ctx.fillRect(hx, hy, 1, 1);
+    ctx.restore();
+
+    // a stray bit falling off the claw now and then
+    if (Math.random() > 0.94) {
+      P.spawn({
+        x: hx, y: hy, vx: (Math.random() - 0.5) * 12, vy: 10 + Math.random() * 12,
+        life: 0.4, size: 1, colour: Math.random() > 0.5 ? '#26c247' : '#5cff7a',
+        drag: 0.95, glow: 5, glowColour: 'rgba(38,194,71,ALPHA)',
+      });
+    }
   }
 
   drawSwing(ctx) {
@@ -350,7 +395,8 @@ export class Player {
       const aa = a0 + this.weapon.arc * t;
       const alpha = (1 - i / 6) * 0.5;
       ctx.globalAlpha = alpha;
-      ctx.fillStyle = fist ? '#c98f5e' : '#dceaff';
+      ctx.fillStyle = this.weapon.kind === 'claw' ? (i < 2 ? '#c8ffd4' : '#26c247')
+        : fist ? '#c98f5e' : '#dceaff';
       const px = this.x + Math.cos(aa) * r;
       const py = this.y - 3 + Math.sin(aa) * r;
       ctx.fillRect(Math.round(px) - 1, Math.round(py) - 1, fist ? 2 : 3, fist ? 2 : 3);

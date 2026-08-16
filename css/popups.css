@@ -540,41 +540,57 @@
 }
 
 /* ---------- DEFRAG board (book three) ----------
-   Green on black, and deliberately not the warm gold the rest of the panels use
-   — this is the one screen in the game that is a machine rather than a room. */
+   Green on black, deliberately not the warm gold the rest of the panels use —
+   this is the one screen in the game that is a machine rather than a room. */
 .puzzle-panel { min-width: 0; }
 #puzzle-title { color: #5cff7a; text-shadow: 0 0 16px rgba(38, 194, 71, 0.45); }
 
 .pz-grid {
   display: grid;
-  gap: 4px;
+  gap: 3px;
   justify-content: center;
   padding: 8px;
   background: #031a08;
   border: 1px solid #127a2c;
   border-radius: 3px;
+  touch-action: none;          /* the grid is dragged, never scrolled */
+  cursor: grab;
+  user-select: none;
 }
+.pz-grid:active { cursor: grabbing; }
+
 .pz-cell {
-  width: 64px; height: 64px;
-  background: #041f0c;
+  width: 56px; height: 56px;
+  background: #06180d;
   border: 1px solid #0a3d17;
   border-radius: 2px;
-  cursor: pointer;
-  overflow: hidden;
-  transition: border-color 0.1s ease, transform 0.08s ease;
+  position: relative;
 }
-.pz-cell canvas { display: block; width: 64px; height: 64px; image-rendering: pixelated; }
-.pz-cell:hover { border-color: #26c247; transform: scale(1.04); }
-/* a tile already sitting where it belongs stops asking for attention */
-.pz-cell.home { border-color: #127a2c; }
-.pz-cell.home:hover { transform: none; }
+
+/* a wall: solid, plated, obviously not somewhere you can go */
+.pz-cell.wall {
+  background:
+    repeating-linear-gradient(45deg, #0a3d17 0 4px, #072a10 4px 8px);
+  border-color: #127a2c;
+}
+
+/* the hole: a punched-out black square with a sour rim */
 .pz-cell.hole {
-  background: #010a04;
-  border-style: dashed;
-  border-color: #0a3d17;
-  cursor: default;
+  background: #000;
+  border-color: #26c247;
+  box-shadow: inset 0 0 12px rgba(38, 194, 71, 0.5);
 }
-.pz-cell.hole:hover { transform: none; border-color: #0a3d17; }
+
+/* the block you are pushing */
+.pz-cell.block::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  background: linear-gradient(160deg, #5cff7a, #127a2c);
+  border: 1px solid #c8ffd4;
+  border-radius: 2px;
+  box-shadow: 0 0 12px rgba(92, 255, 122, 0.6);
+}
 
 .pz-note {
   margin-top: 14px;

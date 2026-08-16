@@ -31,6 +31,10 @@ import * as shopUI from './ui/shopUI.js';
 import * as devUI from './ui/devUI.js';
 import * as puzzleUI from './ui/puzzleUI.js';
 import { Claw } from './entities/claw.js';
+import { CORRUPT_BITE, CORRUPT_FLOOR } from './entities/nullbyte.js';
+
+/** How often a void bites whatever is standing beside it. */
+const VOID_BITE_EVERY = 1.5;
 import { dev, DEV_DAMAGE } from './systems/dev.js';
 
 /* ============================================================
@@ -805,9 +809,12 @@ function update(dt) {
     }
 
     // --- attack ---
+    // Left click uses whichever face of the weapon is live. For everything
+    // except the claw that is the only face there is.
     if (input.tookLeftClick() && !p.dead) {
       const angle = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
-      p.startAttack(angle);
+      if (p.weapon.kind === 'claw' && p.clawMode === 2) throwClaw();
+      else p.startAttack(angle);
     }
     if (p.attacking && !p.swungThisAttack && p.attackT < 0.13) {
       p.swungThisAttack = true;
@@ -819,14 +826,43 @@ function update(dt) {
     // falls through to the claw when you are pointing at nothing.
     if (input.pressed('KeyE') && !p.dead) doInteract(room.nearestInteractive(p));
     if (input.tookRightClick() && !p.dead) {
+      // One rule, every book: point at something you can use and you use it;
+      // point at nothing and the claw changes face. A weapon carried out of
+      // book three keeps both of its modes wherever it goes.
       const aimed = propUnderCursor();
       if (aimed) doInteract(aimed);
-      else throwClaw();
+      else if (p.weapon.kind === 'claw') {
+        p.clawMode = p.clawMode === 1 ? 2 : 1;
+        sfx.uiBig();
+        P.burst(p.x, p.y - 4, 8, {
+          colour: p.clawMode === 2 ? '#5cff7a' : '#26c247',
+          speed: 60, life: 0.3, size: 1, drag: 0.9,
+          glow: 8, glowColour: 'rgba(38,194,71,ALPHA)',
+        });
+      }
     }
   }
 
   p.throwCool = Math.max(0, (p.throwCool || 0) - dt);
   p.update(dt, room.map, room.solids());
+
+  // Voids corrupt anything standing in the 3x3 of tiles around them. Done here
+  // rather than in the prop because props are never handed the player.
+  for (const v of room.props) {
+    if (v.type !== 'void' || p.dead) continue;
+    const near = Math.abs(p.x - v.x) <= TILE * 1.5 && Math.abs(p.y - v.y) <= TILE * 1.5;
+    if (!near) continue;
+    if (v.bite > 0) continue;
+    v.bite = VOID_BITE_EVERY;
+    if (p.corrupt(CORRUPT_BITE, CORRUPT_FLOOR)) {
+      sfx.hurt();
+      cam.shake(4, 0.3);
+      P.burst(p.x, p.y, 14, {
+        colour: '#ff3355', speed: 90, life: 0.5, size: 2, drag: 0.9,
+        glow: 10, glowColour: 'rgba(255,51,85,ALPHA)',
+      });
+    }
+  }
   room.update(dt, p, game);
 
   tryUnlockGate();

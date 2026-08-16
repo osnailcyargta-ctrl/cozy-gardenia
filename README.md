@@ -52,14 +52,29 @@ an endless thing endured.
 5. **The Kernel** — the boss: sweeping laser arms, rings of bullets fired all at once, and walls of
    light with a single gap. 400 HP, two phases.
 
-**Every doorway is an errored gate.** You cannot hit it open and there is no key. It is a sliding
-board — a picture of a circuit, shuffled — and putting the picture back together opens the door.
-Rooms one and two are 3×3, three and four are 4×4.
+**Every doorway is an errored gate.** You cannot hit it open and there is no key. Behind it is a 5×5
+grid holding one block, some walls, and one hole. **Swipe** and the block steps one square that way;
+walls and the edge of the grid stop it. Push the block into the hole and the door opens. Arrow keys
+and WASD do the same thing if you would rather not drag.
 
-The scramble is built out of legal moves rather than by shuffling the array, and that is not fussiness:
-**exactly half of all arrangements of a sliding puzzle cannot be reached from the solved state.** A
-random shuffle would hand roughly half of all players a gate that can never be opened, in a book whose
-only way forward is through it.
+The four gates get harder in a way that is measured rather than hoped for:
+
+| Gate | Walls | Shortest route |
+|---|---|---|
+| Room 1 | 4 | 3–4 steps |
+| Room 2 | 6 | 4–6 steps |
+| Room 3 | 8 | 6–8 steps |
+| Room 4 | 10 | 8–11 steps |
+
+**Every board is checked with a breadth-first search before it is handed out.** Walls are placed at
+random, and random walls can fence the block off from the hole completely — in a book whose only way
+forward is through that gate. The same search picks the hole out of the cells at the right distance,
+which is what makes the difficulty an actual number instead of a feeling.
+
+**The book is full of holes.** Voids are scattered through all four rooms — squares where the book has
+stopped rendering, flat black with binary climbing out of them. They are **solid**, like a chest or an
+anvil, so you walk around them. And they **corrupt anything standing in the 3×3 of tiles around them,
+once every 1.5 seconds.**
 
 **Nullbyte** chases and swipes, but one step in its loop is the **corruption dash**: it locks onto
 where you are standing, turns to static, and throws itself at that point. It cannot be hurt at all
@@ -71,15 +86,21 @@ One Nullbyte in fifty is carrying the **Digital Claw Cannon**.
 
 ### The Digital Claw Cannon
 
-Your own hand, turned into a green binary claw. Two modes:
+Your own hand, turned into a green binary claw — and you can see it, held, whether or not you are
+swinging. **Right click swaps mode. Left click uses whichever mode is live.** The modes belong to the
+weapon, so they work in every book you carry it into, not just book three.
 
-| | |
-|---|---|
-| **Left click** | 6 damage · 0.5s swing, then a 0.3s cooldown — 0.8s end to end |
-| **Right click on empty floor** | throws the hand: 18 damage, no range limit, comes back when it hits anything |
+| | Mode I — Claw | Mode II — Throw |
+|---|---|---|
+| Damage | 6 | 18 |
+| Reach | 2 tiles | unlimited |
+| Swing | 0.2s | 0.2s |
+| Cooldown | none | 0.4s |
 
-Only one hand can be in the air at a time, and it returns to wherever you are standing by the time it
-gets back — not to where you threw it from.
+Mode I is **30 damage a second**, which makes it the fastest weapon in the game and the weakest per
+hit. Mode II throws the hand itself on a cable; it comes back the moment it touches an enemy, a prop
+or a wall, and it returns to wherever you are standing by then — not to where you threw it from. Only
+one hand can be in the air, because it is your hand.
 
 It is the only weapon whose cooldown starts *after* the swing rather than at the same time. That rule
 lives on the weapon (`swing`), so no other weapon was slowed by adding it.
@@ -234,8 +255,8 @@ gone from the next book on the shelf.
 
 Right click interacts with whatever the cursor is **over**, and only if you are also close enough to
 reach it. It used to interact with whatever was nearest, wherever you clicked — that had to change,
-because right click also throws the claw: point at a chest and it opens, point at bare floor and your
-hand goes.
+because right click also swaps the claw's mode: point at a chest and it opens, point at bare floor and
+the claw changes face.
 
 `E` still takes the nearest thing without aiming, which is what keeps the first two books playable
 exactly as they were.
@@ -264,7 +285,7 @@ and having godmode survive a reload mostly means wondering for ten minutes why n
 | `Space` or `F` | Dash (i-frames, 0.75s cooldown) |
 | Scroll wheel / `1`–`4` | Switch hotbar slot |
 | Left click | Attack with the selected slot — or **place it**, if it is a block |
-| Right click | Interact with what you are **pointing at** — or throw the claw, if you are pointing at floor |
+| Right click | Interact with what you are **pointing at** — or swap claw mode, if you are pointing at floor |
 | Left click *in inventory* | Move **one** item |
 | Right click *in inventory* | Move the **whole stack** |
 | `E`, `Q` or `Esc` | Close any panel |
@@ -299,6 +320,7 @@ does nothing, because bare hands deal zero damage.
 | Nullbyte | 40 HP · 8 damage · untouchable while it corrupts |
 | Corruption | −half a heart of MAX health per hit, down to 7.5 hearts |
 | Digital Claw Cannon | 6 melee / 18 thrown · 2% drop from a Nullbyte |
+| Void | corrupts every 1.5s within 3×3 tiles · solid |
 | New room | +3 hearts, once per room |
 | Siren I / II | ~5.2s between attacks |
 | Drowned Thrall | ~2.6s between lunges |

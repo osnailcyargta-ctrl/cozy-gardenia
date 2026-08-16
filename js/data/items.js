@@ -18,16 +18,19 @@ export const ITEM_DEFS = {
   // ---- book three ----
   digital_claw_cannon: {
     id: 'digital_claw_cannon', name: 'Digital Claw Cannon', stack: 1,
-    desc: '6 dmg claw · right click throws it for 18',
-    // Two modes, so `kind` only describes the left click. The right click is
-    // handled where interaction is: point at empty floor and the hand goes.
+    desc: '6 dmg claw · right click swaps to the 18 dmg throw',
+    // Two modes on one weapon. Right click swaps between them and left click
+    // uses whichever is live, so `kind` describes the weapon rather than a
+    // click. It works in every book — the modes belong to the weapon, not to
+    // book three.
     weapon: {
       kind: 'claw', name: 'Digital Claw Cannon',
-      damage: 6, range: 26, arc: 1.7,
-      // The swing animation runs first and the cooldown only starts once it is
-      // over, so a full claw is 0.8s end to end.
-      swing: 0.5, cooldown: 0.3,
+      // Mode one: two tiles of reach, a 0.2s swing and no cooldown at all,
+      // which is 30 damage a second — this is the fast weapon in the game now.
+      damage: 6, range: 32, arc: 1.7,
+      swing: 0.2, cooldown: 0,
       projectileChip: 3,
+      // Mode two: the hand itself, thrown.
       throwDamage: 18, throwCooldown: 0.4, throwSpeed: 240,
     },
   },
