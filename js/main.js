@@ -30,6 +30,8 @@ import * as hotbar from './ui/hotbar.js';
 import * as shopUI from './ui/shopUI.js';
 import * as devUI from './ui/devUI.js';
 import * as puzzleUI from './ui/puzzleUI.js';
+import * as portalUI from './ui/portalUI.js';
+import { Portal, tileCentre } from './entities/portalgun.js';
 import { Claw } from './entities/claw.js';
 import { Prop } from './entities/props.js';
 import * as rates from './world/spawnrates.js';
@@ -85,6 +87,11 @@ const game = {
     shelfUI.refresh();
   },
   wipeSave: () => {
+    // Leave the book BEFORE wiping, and only then wipe. The run is written out
+    // every frame now, so a wipe with a book still open was undone on the next
+    // frame — and going home afterwards was worse, because goToLibrary saves the
+    // book on its way out and put the whole thing back.
+    if (game.scene === 'book') goToLibrary();
     save.wipe();
     game.cleared = new Set();
     game.hardCleared = new Set();
@@ -111,6 +118,7 @@ hotbar.init(game);
 shopUI.init(game);
 devUI.init(game);
 puzzleUI.init(game);
+portalUI.init(game);
 
 const titleScreen = document.getElementById('title-screen');
 const deathScreen = document.getElementById('death-screen');
@@ -438,13 +446,67 @@ function loadRateOverride() {
   }
 }
 
+/**
+ * Put a portal on the floor in front of you and ask where it goes. Only one at
+ * a time — a floor covered in doorways is not a tool, it is a mess.
+ */
+function openPortalHere() {
+  const p = game.player, room = game.room;
+  if (room.portal) { room.portal.dead = true; room.portal = null; }
+  const a = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
+  const px = p.x + Math.cos(a) * 22;
+  const py = p.y + Math.sin(a) * 22;
+  portalUI.open((dest) => {
+    room.portal = new Portal(px, py, dest);
+  });
+}
+
+/** Walk into one and come out the other side. */
+function takePortal(dest) {
+  const book = BOOKS[dest.book];
+  if (!book?.rooms) return;
+  game.room.portal = null;
+  enterBook(dest.book);
+  if (game.scene !== 'book') return;
+  const idx = Math.max(0, Math.min(dest.room, game.rooms.length - 1));
+  loadRoom(idx, 'forward');
+  const c = tileCentre(dest.tx, dest.ty);
+  game.player.x = c.x;
+  game.player.y = c.y;
+  cam.shake(5, 0.4);
+  sfx.uiBig();
+  P.burst(c.x, c.y, 22, {
+    colour: '#f0a020', speed: 110, life: 0.6, size: 2, drag: 0.9,
+    glow: 12, glowColour: 'rgba(240,160,32,ALPHA)',
+  });
+}
+
+/** Passive regeneration: half a heart, every two seconds. */
+const REGEN_EVERY = 2;
+const REGEN_AMOUNT = 5;
+
+/**
+ * Write the run out. Called every frame — see the note at the call site for why
+ * that is affordable — and routed to whichever of the two shapes this book uses.
+ */
+function autosave() {
+  if (game.scene !== 'book' || game.rateRoom) return;
+  if (inDungeon()) {
+    save.saveDungeon(game.bookIndex, game.milestone, game.inventory,
+      hotbar.selectedIndex(), game.smelter);
+  } else {
+    save.saveBook(game.bookIndex, game.rooms, game.inventory,
+      hotbar.selectedIndex(), game.smelter);
+  }
+}
+
 /** What each book's boss calls in when hard mode pushes it into phase two. */
 const ESCORT = ['servant1', 'thrall', 'nullbyte'];
 
 function summonEscort(boss) {
   const kind = ESCORT[game.bookIndex] || 'servant1';
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2;
     const e = makeEnemy(kind, boss.x + Math.cos(a) * 52, boss.y + Math.sin(a) * 44);
     if (!e) continue;
     e.defIndex = -1;                 // called in, never part of the room's roster
@@ -553,7 +615,7 @@ function fadeThen(fn) {
 
 function anyPopupOpen() {
   return invUI.isOpen() || craftUI.smelterOpen() || craftUI.anvilOpen() || shelfUI.isOpen()
-    || shopUI.isOpen() || devUI.isOpen() || puzzleUI.isOpen()
+    || shopUI.isOpen() || devUI.isOpen() || puzzleUI.isOpen() || portalUI.isOpen()
     || !deathScreen.classList.contains('hidden')
     || !resetScreen.classList.contains('hidden');
 }
@@ -562,6 +624,7 @@ function closeAllPopups() {
   closeReset();
   devUI.close();
   puzzleUI.close();
+  portalUI.close();
   shopUI.close();
   invUI.close();
   craftUI.closeSmelter();
@@ -650,6 +713,7 @@ function resolveSwing() {
   const dmg = Math.round((crit ? w.damage * CRIT_MULT : w.damage) * dev.damageMul);
   if (crit && w.damage > 0) {
     cam.shake(5, 0.22);
+    freezeFrame(0.07);
     P.burst(p.x + Math.cos(p.attackAngle) * 14, p.y + Math.sin(p.attackAngle) * 14, 12, {
       colour: '#fff2b0', speed: 130, life: 0.35, size: 2, drag: 0.88,
       glow: 14, glowColour: 'rgba(255,242,176,ALPHA)',
@@ -703,6 +767,9 @@ function resolveSwing() {
     }
   }
 
+  // A blow that connected holds the world for a few dozen milliseconds. Weight
+  // is almost entirely this and the shake; neither costs a thing.
+  if (hitAnything) freezeFrame(0.035);
   return hitAnything;
 }
 
@@ -783,6 +850,10 @@ function refreshInventory() {
  * next book on the shelf.
  */
 function onBossDefeated() {
+  // The Kernel leaves the way it travelled behind.
+  if (game.room?.boss?.name === 'The Kernel' && !inDungeon()) {
+    game.room.addDrop('portal_gun', game.room.boss.x, game.room.boss.y + 12);
+  }
   // The dungeon has no ending, so the bosses it throws at you every fifteen
   // rooms are not one. Marking book four cleared would be a lie the shelf then
   // repeats back at you, and saveBook does not describe a generated book at all.
@@ -870,9 +941,24 @@ function autoScale(dt) {
   }
 }
 
+/**
+ * Hit-stop: the world holds still for a few dozen milliseconds on a heavy blow.
+ * It is the cheapest weight in games — one subtraction — and it is what makes a
+ * hit land rather than merely happen.
+ */
+let hitStop = 0;
+export function freezeFrame(seconds) { hitStop = Math.max(hitStop, seconds); }
+
 function frame(now) {
-  const dt = Math.min(0.05, (now - last) / 1000);
+  const real = Math.min(0.05, (now - last) / 1000);
   last = now;
+
+  let dt = real;
+  if (hitStop > 0) {
+    hitStop -= real;
+    // not a full stop: a crawl reads as weight, a freeze reads as a dropped frame
+    dt = real * 0.12;
+  }
   game.time += dt;
 
   update(dt);
@@ -939,6 +1025,7 @@ function update(dt) {
     if (input.tookLeftClick() && !p.dead) {
       const angle = Math.atan2(input.mouse.y - p.y, input.mouse.x - p.x);
       if (p.weapon.kind === 'claw' && p.clawMode === 2) throwClaw();
+      else if (p.weapon.kind === 'portal') openPortalHere();
       else p.startAttack(angle);
     }
     if (p.attacking && !p.swungThisAttack && p.attackT < 0.13) {
@@ -965,6 +1052,29 @@ function update(dt) {
           glow: 8, glowColour: 'rgba(38,194,71,ALPHA)',
         });
       }
+    }
+  }
+
+  // Autosave, every frame. Measured before committing to it: the whole payload
+  // is ~126 bytes and a full write costs 0.01ms, which is a tenth of one percent
+  // of a 60fps frame — far below anything that could cost a frame.
+  autosave();
+
+  if (room.portal) {
+    if (room.portal.update(dt, p)) { takePortal(room.portal.dest); return; }
+    if (room.portal.dead) room.portal = null;
+  }
+
+  // Half a heart every two seconds, always, everywhere.
+  p.regenT = (p.regenT || 0) + dt;
+  if (p.regenT >= REGEN_EVERY) {
+    p.regenT -= REGEN_EVERY;
+    if (!p.dead && p.hp > 0 && p.hp < p.maxHp) {
+      p.heal(REGEN_AMOUNT);
+      P.burst(p.x, p.y + 2, 4, {
+        colour: '#7ee08a', speed: 26, life: 0.5, size: 1, drag: 0.92,
+        glow: 6, glowColour: 'rgba(126,224,138,ALPHA)',
+      });
     }
   }
 

@@ -9,7 +9,7 @@
 
 import { iconCanvas } from './icons.js';
 import { ITEM_DEFS } from '../data/items.js';
-import { rollForge, displayName, modColour } from '../data/modifiers.js';
+import { rollForge, displayName, modColour , statLine } from '../data/modifiers.js';
 import { sfx } from '../engine/audio.js';
 import { rng } from '../engine/rng.js';
 
@@ -78,7 +78,8 @@ export function refresh() {
     el.insertAdjacentHTML('beforeend',
       `<div class="shop-text">
          <span class="shop-name"${colour ? ` style="color:${colour}"` : ''}>${name}</span>
-         <span class="shop-desc">${sold ? 'Sold.' : def.desc || ''}</span>
+         <span class="shop-desc">${sold ? 'Sold.'
+           : (def.weapon ? statLine(def.weapon, entry.mod) : def.desc || '')}</span>
        </div>
        <span class="shop-price">${sold ? '—' : entry.price + 'c'}</span>`);
 

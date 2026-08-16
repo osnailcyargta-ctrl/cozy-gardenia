@@ -145,6 +145,7 @@ export class Room {
     this.nests = [];      // placed blackholian nests
     this.holes = [];      // and what they throw
     this.claw = null;     // the one thrown hand, if there is one
+    this.portal = null;   // and the one doorway, if there is one
     this.cleared = false;
     this.enteredT = 0;
     // Set the first time you walk in. Somewhere new is worth three hearts;
@@ -400,6 +401,7 @@ export class Room {
     // waves sit on top of everything they are drowning
     for (const w of this.waves) w.draw(ctx);
     this.claw?.draw(ctx);
+    this.portal?.draw(ctx);
     for (const h of this.holes) h.draw(ctx);
   }
 
@@ -412,6 +414,7 @@ export class Room {
     }
     for (const w of this.waves) w.drawLight(ctx);
     this.claw?.drawLight(ctx);
+    this.portal?.drawLight(ctx);
     for (const n of this.nests) addLight(ctx, n.x, n.y, 40 + n.charge * 26, 'rgba(168,102,224,ALPHA)', 0.4 + n.pulse * 0.5);
     // last, so the holes can eat the light everything else just added
     for (const h of this.holes) h.drawLight(ctx);

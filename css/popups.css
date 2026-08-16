@@ -599,3 +599,95 @@
   color: #4f9e63;
   letter-spacing: 0.06em;
 }
+
+/* A weapon's live numbers, after its modifier — set apart from flavour text
+   because these are the thing you actually compare between two swords. */
+.tip-stats {
+  color: #c9b98f;
+  letter-spacing: 0.04em;
+}
+
+/* What a chained book is waiting for. Sits above the spine on hover, and only
+   exists while the book is actually sealed. */
+.book { position: relative; }
+.book-why {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 8px);
+  transform: translateX(-50%) translateY(4px);
+  width: max-content;
+  max-width: 220px;
+  padding: 6px 9px;
+  background: #100c1a;
+  border: 1px solid #4a3f66;
+  border-radius: 3px;
+  color: #cbbde6;
+  font-size: 11px;
+  line-height: 1.35;
+  text-align: center;
+  letter-spacing: 0.03em;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease, transform 0.14s ease;
+  z-index: 8;
+}
+.book-why::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -4px;
+  border: 4px solid transparent;
+  border-top-color: #4a3f66;
+}
+.book:hover .book-why {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ---------- portal destination ---------- */
+.portal-panel { min-width: 260px; }
+.portal-panel h2 { color: #f0cc5a; }
+#portal-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 10px;
+  background: #120e1d;
+  border: 1px solid #4a3f66;
+  border-radius: 3px;
+  color: #ffe9b0;
+  font: 16px/1 monospace;
+  letter-spacing: 0.28em;
+  text-align: center;
+}
+#portal-input:focus { outline: none; border-color: #f0a020; }
+.pg-legend {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #6f6288;
+}
+.pg-note {
+  margin-top: 10px;
+  min-height: 15px;
+  text-align: center;
+  font-size: 11px;
+  color: #d08a6a;
+}
+
+/* The HUD moves between states rather than cutting. These are compositor-only
+   properties — transform and opacity — so they cost nothing per frame and never
+   touch layout. */
+#boss-fill,
+.heart, .heart img, .heart canvas {
+  transition: width 0.18s cubic-bezier(0.22, 0.61, 0.36, 1),
+              opacity 0.18s ease,
+              transform 0.18s cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform, opacity;
+}
+#boss-bar { transition: opacity 0.25s ease; }
+
+/* Slots lift very slightly under the cursor instead of jumping colour. */
+.slot { transition: transform 0.12s cubic-bezier(0.22,0.61,0.36,1), border-color 0.12s ease; }
+.slot:hover { transform: translateY(-1px); }

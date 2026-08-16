@@ -116,6 +116,20 @@ one hand can be in the air, because it is your hand.
 It is the only weapon whose cooldown starts *after* the swing rather than at the same time. That rule
 lives on the weapon (`swing`), so no other weapon was slowed by adding it.
 
+### The Portal Gun
+
+The Kernel leaves one behind. Left click puts a portal on the floor and asks for four numbers:
+
+```
+1 3 0 0    →  book 1, room 3, tile x 0, tile y 0
+```
+
+Books and rooms count from **1**, the way they are numbered on the shelf and in the room label. Tiles
+are the map's own coordinates, so they count from **0**, `(0, 0)` is the **top-left**, and **y counts
+downward** — `y + 1` is one tile lower on the screen. You can only aim at a book you have finished,
+and it refuses a tile that is off the map or solid, because that would be a hole you could not climb
+out of.
+
 ### Hard mode
 
 Every book you have finished grows a **lever above the first gate**. Throw it and the handle swings
@@ -125,7 +139,7 @@ over; walk out of room one and it commits.
 |---|---|
 | Enemy and boss damage | ×1.5 |
 | Enemy and boss health | ×1.25 |
-| At the boss's phase two | **five more** come in with it |
+| At the boss's phase two | **three more** come in with it |
 
 Committing rebuilds the book from its definitions, so **everything you already killed on this visit
 stands back up** carrying the hard numbers. A book half-cleared on normal and half on hard would be
@@ -287,6 +301,20 @@ Killing a boss does not interrupt you and does not congratulate you. There is no
 anywhere in the game. You find out a story ended by walking back to the library and seeing the chain
 gone from the next book on the shelf.
 
+### Saving, healing, and weight
+
+- **The run is written out every frame.** Measured before committing to it: the whole payload is about
+  126 bytes and a full write costs 0.01ms — a tenth of one percent of a 60fps frame. There is no
+  "save point" any more; there is no point at which you can lose anything.
+- **Half a heart every two seconds**, always, in every book.
+- **Hit-stop.** A blow that connects holds the world at 12% speed for 35ms, a critical for 70ms. It is
+  one subtraction in the frame loop and it is most of what makes a hit feel like it landed.
+- **Screen shake rings along one axis** and decays, rather than being fresh noise every frame. White
+  noise at 60Hz reads as the screen tearing; a struck thing rings in the direction it was struck.
+
+Measured on a busy room — depth 24, 23 enemies alive — before and after all of the above: median frame
+18.4ms → 18.7ms, and the worst frame actually improved (41.3ms → 33.3ms).
+
 ### Pointing at things
 
 Right click interacts with whatever the cursor is **over**, and only if you are also close enough to
@@ -296,6 +324,15 @@ the claw changes face.
 
 `E` still takes the nearest thing without aiming, which is what keeps the first two books playable
 exactly as they were.
+
+### The shelf tells you why
+
+A chained book shows what would unchain it when you hover it — "Finish Underwater Mommy on hard" —
+rather than simply refusing and leaving you to guess which of several conditions you missed.
+
+Weapons describe themselves from their **live** numbers, after the modifier has been folded in. A
+Legendary blade used to still advertise the base damage, which stopped being true the moment the
+modifier was attached.
 
 ### Developer mode
 

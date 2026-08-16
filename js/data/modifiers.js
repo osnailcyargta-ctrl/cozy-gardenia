@@ -79,6 +79,26 @@ export function applyMod(base, mod) {
   };
 }
 
+/**
+ * The weapon's real numbers, after the modifier has been folded in. The static
+ * `desc` on an item describes the base, which is a lie the moment a modifier is
+ * attached: a Legendary blade still claimed the plain damage.
+ */
+export function statLine(base, mod) {
+  const w = applyMod(base, mod);
+  if (!w) return '';
+  const parts = [];
+  if (w.damage) parts.push(`${w.damage} dmg`);
+  // Swings a second, rather than the raw cooldown — "0.277s" means nothing at a
+  // glance, "3.6/s" is immediately comparable to the next weapon.
+  const cycle = (w.swing ?? 0) + (w.cooldown ?? 0);
+  if (cycle > 0) parts.push(`${(1 / cycle).toFixed(1)}/s`);
+  if (w.range) parts.push(`${(w.range / 16).toFixed(1)} tiles`);
+  if (w.crit) parts.push(`+${Math.round(w.crit * 100)}% crit`);
+  if (w.throwDamage) parts.push(`${w.throwDamage} thrown`);
+  return parts.join(' · ');
+}
+
 /** "Heavy Iron Sword", or just "Iron Sword". */
 export function displayName(baseName, mod) {
   return MODS[mod] ? `${MODS[mod].name} ${baseName}` : baseName;

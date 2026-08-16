@@ -6,7 +6,7 @@
 import { transfer } from '../systems/inventory.js';
 import { iconCanvas } from './icons.js';
 import { ITEM_DEFS } from '../data/items.js';
-import { displayName, modColour, MODS } from '../data/modifiers.js';
+import { displayName, modColour, MODS, statLine } from '../data/modifiers.js';
 import { sfx } from '../engine/audio.js';
 
 const invGrid = document.getElementById('inv-grid');
@@ -77,7 +77,11 @@ function showTip(container, index) {
     `<span${colour ? ` style="color:${colour}"` : ''}>${displayName(d?.name || s.id, s.mod)}</span>` +
     (s.count > 1 ? ` <span style="color:#7e6c92">×${s.count}</span>` : '') +
     (m ? `<span class="tip-sub" style="color:${colour}">${m.blurb}</span>` : '') +
-    (d?.desc ? `<span class="tip-sub">${d.desc}</span>` : '');
+    // A weapon describes itself from its own live numbers; everything else
+    // keeps the flat text it was written with.
+    (d?.weapon
+      ? `<span class="tip-sub tip-stats">${statLine(d.weapon, s.mod)}</span>`
+      : (d?.desc ? `<span class="tip-sub">${d.desc}</span>` : ''));
   document.body.appendChild(tipEl);
 }
 

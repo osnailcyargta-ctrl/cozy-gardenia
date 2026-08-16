@@ -40,6 +40,16 @@ export const ITEM_DEFS = {
     },
   },
 
+  portal_gun: {
+    id: 'portal_gun', name: 'Portal Gun', stack: 1,
+    desc: 'Opens a way into any book you have finished',
+    weapon: {
+      kind: 'portal', name: 'Portal Gun',
+      damage: 4, range: 24, arc: 1.4,
+      swing: 0.2, cooldown: 0.5,
+    },
+  },
+
   // ---- book four ----
   crypt_key: { id: 'crypt_key', name: 'Crypt Key', stack: 8, desc: 'Opens the way deeper' },
 

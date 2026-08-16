@@ -8,7 +8,7 @@
 import { VW, VH } from './canvas.js';
 
 export const cam = {
-  shakeX: 0, shakeY: 0, _mag: 0, _t: 0, pushX: 0, pushY: 0,
+  shakeX: 0, shakeY: 0, _mag: 0, _t: 0, _ang: 0, _phase: 0, pushX: 0, pushY: 0,
   zoom: 1, zoomX: VW / 2, zoomY: VH / 2,
 };
 
@@ -31,10 +31,18 @@ export function zoomOut(dur = 0.6) {
 
 export function zooming() { return z.t < z.dur; }
 
+/**
+ * Shake, as a decaying oscillation along one axis rather than fresh noise every
+ * frame. White noise at 60Hz reads as the screen tearing; a struck object rings
+ * along the direction it was struck and dies away, which is what an impact
+ * actually looks like — and it costs one sine instead of two randoms.
+ */
 export function shake(magnitude, duration = 0.25) {
+  if (magnitude >= cam._mag) cam._ang = Math.random() * Math.PI * 2;
   cam._mag = Math.max(cam._mag, magnitude);
   cam._t = Math.max(cam._t, duration);
   cam._dur = cam._t;
+  cam._phase = 0;
 }
 
 /** A directional nudge, e.g. away from a dash impact. */
@@ -55,10 +63,13 @@ export function update(dt) {
 
   if (cam._t > 0) {
     cam._t -= dt;
+    cam._phase = (cam._phase || 0) + dt;
     const k = Math.max(0, cam._t / (cam._dur || 1));
     const m = cam._mag * k * k;
-    cam.shakeX = (Math.random() - 0.5) * 2 * m;
-    cam.shakeY = (Math.random() - 0.5) * 2 * m;
+    // ~34Hz ring, so it is fast enough to read as a jolt but still a curve
+    const swing = Math.sin(cam._phase * 34) * m;
+    cam.shakeX = Math.cos(cam._ang || 0) * swing;
+    cam.shakeY = Math.sin(cam._ang || 0) * swing;
     if (cam._t <= 0) { cam._mag = 0; cam.shakeX = cam.shakeY = 0; }
   } else {
     cam.shakeX = cam.shakeY = 0;
@@ -74,6 +85,7 @@ export function totalY() { return cam.shakeY + cam.pushY; }
 
 export function reset() {
   cam.shakeX = cam.shakeY = cam.pushX = cam.pushY = cam._mag = cam._t = 0;
+  cam._ang = cam._phase = 0;
   cam.zoom = 1;
   cam.zoomX = VW / 2;
   cam.zoomY = VH / 2;
