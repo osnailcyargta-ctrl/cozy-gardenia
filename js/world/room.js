@@ -163,6 +163,13 @@ export class Room {
       if (made) {
         made.defIndex = i;
         if (e.keyId !== undefined) made.keyId = e.keyId;
+        // Bosses ignore statMul in their constructors — they are hand-tuned —
+        // so the dungeon's curve is applied to them here instead.
+        if (made.isBoss && m !== 1) {
+          made.maxHp = Math.round(made.maxHp * m);
+          made.hp = made.maxHp;
+          made.dmgMul = m;
+        }
       }
       return made;
     }).filter(Boolean);

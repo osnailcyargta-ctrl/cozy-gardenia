@@ -153,12 +153,40 @@ function spawnPoints(rand, rows, n) {
  * One room, at one depth. `runSeed` keeps a run's rooms stable across a rebuild
  * so dying and coming back does not reshuffle the floor under you.
  */
+/**
+ * Bosses every fifteen rooms — but landings come every ten, and 30, 60 and 90
+ * are both. The landing keeps its room and the boss slides one deeper, so you
+ * never lose a portal home and you always meet the boss straight after a rest.
+ */
+export function isBossDepth(depth) {
+  if (depth < 15 || isMilestone(depth)) return false;
+  if (depth % 15 === 0) return true;
+  // pushed off a landing. The depth guard above matters: without it room 1
+  // qualifies, because room 0 is divisible by both and does not exist.
+  return (depth - 1) % 15 === 0 && isMilestone(depth - 1);
+}
+
+/**
+ * Which one shows up. The Kernel is the rare one: it is book three's ending and
+ * it stays worth something by not turning up every other time.
+ */
+function pickBoss(rand) {
+  const r = rand();
+  if (r < 0.42) return 'king';
+  if (r < 0.84) return 'queen';
+  return 'kernel';
+}
+
 export function makeRoom(runSeed, depth) {
   const seed = (runSeed * 2654435761 + depth * 40503) >>> 0;
   const rand = rng(seed);
   const rows = layout(seed, depth);
   const milestone = isMilestone(depth);
+  const boss = isBossDepth(depth);
   const { count, statMul } = scaling(depth);
+  // Bosses take half the dungeon's curve. At the full multiplier a Kernel at
+  // room 60 is 3500 HP, which is a correct number and a twenty minute fight.
+  const bossMul = 1 + (statMul - 1) * 0.5;
 
   const props = [];
   const enemies = [];
@@ -178,6 +206,22 @@ export function makeRoom(runSeed, depth) {
     // rooms you fight through. Torches along both walls rather than four in the
     // far corners, which left the middle — where everything actually is — dark.
     for (const x of [56, 152, 248, 344, 424]) {
+      props.push({ type: 'torch', x, y: 42 });
+      props.push({ type: 'torch', x, y: VH - 38 });
+    }
+  } else if (boss) {
+    // One thing in the room, and it has to stand somewhere you can actually get
+    // to. A fixed centre-of-the-room coordinate lands inside a pillar often
+    // enough that the room becomes unfinishable — the gate wants the boss dead
+    // and the boss is behind a wall.
+    const spots = spawnPoints(rand, rows, 8);
+    const want = { x: VW / 2 + 40, y: VH / 2 };
+    const spot = spots.length
+      ? spots.reduce((best, p) =>
+          Math.hypot(p.x - want.x, p.y - want.y) < Math.hypot(best.x - want.x, best.y - want.y) ? p : best)
+      : want;
+    enemies.push({ type: pickBoss(rand), x: spot.x, y: spot.y, statMul: bossMul });
+    for (const x of [40, VW - 40]) {
       props.push({ type: 'torch', x, y: 42 });
       props.push({ type: 'torch', x, y: VH - 38 });
     }
@@ -226,7 +270,9 @@ export function makeRoom(runSeed, depth) {
     // blackout. A landing is brighter on purpose: it is where you stop.
     mood: milestone
       ? { fog: 0.26, vignette: 1.0, ambient: '#3e3660' }
-      : { fog: 0.34, vignette: 1.08, ambient: '#342c50' },
+      : boss
+        ? { fog: 0.3, vignette: 1.16, ambient: '#2a2348' }
+        : { fog: 0.34, vignette: 1.08, ambient: '#342c50' },
     floor: 'crypt',
     props,
     // The way on is barred until the room is empty. Landings have nothing to
@@ -242,6 +288,7 @@ export function makeRoom(runSeed, depth) {
     exitTo: depth + 1,
     backTo: null,
     milestone,
+    boss,
     statMul,
   };
 }

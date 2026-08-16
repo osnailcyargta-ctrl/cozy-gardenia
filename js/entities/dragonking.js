@@ -40,6 +40,9 @@ export class DragonKing {
     this.x = x; this.y = y;
     this.homeX = x; this.homeY = y;
     this.isBoss = true;
+    // Scaled up when the dungeon spawns one at depth. Every number this boss
+    // deals passes through it; 1 leaves book one exactly as it was.
+    this.dmgMul = 1;
     this.name = 'Dragon King';
     // Drawn at 2x: a 40x32 sprite reads as a trinket next to a 16px player,
     // not as the thing the whole book builds toward. Hitbox follows the art.
@@ -327,7 +330,7 @@ export class DragonKing {
 
         if (!this.hitThisDash && dist < 40) {
           this.hitThisDash = true;
-          player.hurt(22, this.x, this.y);
+          player.hurt(Math.round(22 * this.dmgMul), this.x, this.y);
           cam.shake(8, 0.35);
         }
         if (this.t > 0.5) { this.state = 'recover'; this.t = 0; }
@@ -350,7 +353,7 @@ export class DragonKing {
           this.volleyLeft--;
           const a = Math.atan2(player.y - this.mouthY(), player.x - this.mouthX());
           this.projectiles.push(new Fireball(this.mouthX(), this.mouthY(), a, {
-            damage: 12,
+            damage: Math.round(12 * this.dmgMul),
             speed: 92,
             turn: this.phase === 2 ? 2.9 : 2.2,
             homeFor: this.phase === 2 ? 1.9 : 1.5,
@@ -370,7 +373,7 @@ export class DragonKing {
         if (this.t > 0.25) {
           this.state = 'laser';
           this.t = 0;
-          this.projectiles.push(new Laser(this, ang, { damage: 18, len: 560 }));
+          this.projectiles.push(new Laser(this, ang, { damage: Math.round(18 * this.dmgMul), len: 560 }));
         }
         break;
 

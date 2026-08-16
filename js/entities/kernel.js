@@ -16,7 +16,26 @@ import * as P from '../engine/particles.js';
 import { sfx } from '../engine/audio.js';
 import * as cam from '../engine/camera.js';
 
-const MAX_HP = 400;
+const MAX_HP = 1200;
+
+/** Scaled up when the dungeon spawns one at depth. */
+const DMG = 3;
+
+/**
+ * Corrupt II — what every single thing the Kernel throws carries.
+ * A whole heart of max health per hit rather than half, it can push you further
+ * down than anything in book three can (five hearts rather than seven and a
+ * half), and it drags you for three seconds on top.
+ */
+export const CORRUPT2_BITE = 10;
+export const CORRUPT2_FLOOR = 50;
+const SLOW_FACTOR = 0.5;
+const SLOW_TIME = 3;
+
+/** How long it will tolerate being alive before it starts eating the room. */
+const DECAY_AFTER = 25;
+const DECAY_EVERY = 3.5;
+const DECAY_CAP = 16;
 
 /** Head down, head half up, then the fight — the same shape as the other two. */
 const WAKE = { sleep: 1.4, boot: 1.1, rise: 0.6 };
@@ -24,6 +43,12 @@ const FALL = 2.4;
 
 const SCRIPT_1 = ['fan', 'arms', 'wall', 'fan', 'arms'];
 const SCRIPT_2 = ['arms', 'fan', 'wall', 'fan', 'wall', 'random'];
+
+/** Everything it throws hangs Corrupt II off the hit. */
+export function corruptII(player) {
+  player.slow?.(SLOW_FACTOR, SLOW_TIME);
+  return player.corrupt?.(CORRUPT2_BITE, CORRUPT2_FLOOR);
+}
 
 const DIGITAL_LOOK = {
   core: '#031a08', mid: '#26c247', hot: '#c8ffd4',
@@ -42,7 +67,7 @@ class Beam {
     this.owner = owner;
     this.angle = angle;
     this.spin = spin;                 // radians per second
-    this.warn = opts.warn ?? 0.7;
+    this.warn = opts.warn ?? 0.42;      // less time to read it than book three had
     this.live = opts.live ?? 3.2;
     this.damage = opts.damage ?? 14;
     this.len = 520;
@@ -70,6 +95,7 @@ class Beam {
       const perp = Math.abs(px * -dy + py * dx);
       if (perp < 7 && !rayHitsWall(map, o.x, o.y, player.x, player.y)) {
         player.hurt(this.damage, o.x, o.y);
+        corruptII(player);
         this.hitCool = 0.6;           // a sweeping beam must not tick every frame
       }
     }
@@ -144,7 +170,7 @@ class Wall {
     this.roared = false;
   }
 
-  get warning() { return this.t < 0.9; }
+  get warning() { return this.t < 0.55; }
 
   update(dt, player) {
     this.t += dt;
@@ -158,6 +184,7 @@ class Wall {
         && Math.abs(player.y - this.gapY) > this.gapH / 2) {
       this.hitPlayer = true;
       player.hurt(this.damage, this.x - this.dir * 20, player.y);
+      corruptII(player);
     }
   }
 
@@ -227,6 +254,14 @@ export class Kernel {
     this.locksPlayer = true;
     this.defeatDone = false;
     this.glitchT = 0;
+
+    // Scaled by the dungeon; 1 in book three.
+    this.dmgMul = 1;
+    // The soft timer. Let it live and it starts punching holes in its own room.
+    this.aliveT = 0;
+    this.decayT = 0;
+    this.decayed = 0;
+    this.pendingVoids = [];
   }
 
   get script() { return this.phase === 1 ? SCRIPT_1 : SCRIPT_2; }
@@ -283,10 +318,12 @@ export class Kernel {
       case 'arms': {
         this.state = 'arms';
         const spin = (Math.random() > 0.5 ? 1 : -1) * (this.phase === 2 ? 1.25 : 0.85);
-        const arms = this.phase === 2 ? 3 : 2;
+        // Four times the arms it had. Eight beams at 45 degrees is still a wheel
+        // you can walk between; twelve at 30 is what phase two is for.
+        const arms = (this.phase === 2 ? 3 : 2) * 4;
         for (let i = 0; i < arms; i++) {
           this.projectiles.push(new Beam(this, (i / arms) * Math.PI * 2, spin, {
-            damage: this.phase === 2 ? 16 : 13,
+            damage: Math.round((this.phase === 2 ? 16 : 13) * DMG * this.dmgMul),
             live: this.phase === 2 ? 4 : 3.2,
           }));
         }
@@ -297,9 +334,10 @@ export class Kernel {
         this.state = 'wall';
         const dir = Math.random() > 0.5 ? 1 : -1;
         const gap = 60 + Math.random() * (VH - 140);
-        this.projectiles.push(new Wall(dir, gap, this.phase === 2 ? 140 : 108, 15));
+        const wdmg = Math.round(15 * DMG * this.dmgMul);
+        this.projectiles.push(new Wall(dir, gap, this.phase === 2 ? 190 : 150, wdmg));
         if (this.phase === 2) {
-          this.projectiles.push(new Wall(-dir, 60 + Math.random() * (VH - 140), 120, 15));
+          this.projectiles.push(new Wall(-dir, 60 + Math.random() * (VH - 140), 165, wdmg));
         }
         break;
       }
@@ -309,13 +347,16 @@ export class Kernel {
 
   /** A whole ring of bullets on one frame — nothing else in the game does this. */
   fireFan(player) {
-    const n = this.phase === 2 ? 14 : 10;
+    // Four times the bullets. A ring this dense has to keep its shape or it is
+    // just noise, which is why none of them steer.
+    const n = (this.phase === 2 ? 14 : 10) * 4;
     const base = Math.atan2(player.y - this.y, player.x - this.x) + Math.random() * 0.3;
     for (let i = 0; i < n; i++) {
       const a = base + (i / n) * Math.PI * 2;
       this.projectiles.push(new Fireball(this.x + Math.cos(a) * 16, this.y + Math.sin(a) * 16, a, {
-        // no steering at all: a ring only reads as a ring if it keeps its shape
-        look: DIGITAL_LOOK, damage: 9, speed: 74, turn: 0, homeFor: 0.1, life: 5,
+        look: DIGITAL_LOOK, damage: Math.round(9 * DMG * this.dmgMul),
+        speed: 74, turn: 0, homeFor: 0.1, life: 5,
+        onHitPlayer: corruptII,
       }));
     }
     sfx.fire();
@@ -356,23 +397,35 @@ export class Kernel {
 
     if (this.phase === 2) this.glitchT += dt;
 
+    // Let it live long enough and it starts eating its own room. This is a soft
+    // timer, not a hard one: the arena gets smaller, it never runs out.
+    this.aliveT += dt;
+    if (this.aliveT > DECAY_AFTER && this.decayed < DECAY_CAP) {
+      this.decayT -= dt;
+      if (this.decayT <= 0) {
+        this.decayT = DECAY_EVERY;
+        const spot = this.pickVoid(player, map, solids);
+        if (spot) { this.pendingVoids.push(spot); this.decayed++; sfx.break(); cam.shake(4, 0.3); }
+      }
+    }
+
     switch (this.state) {
       case 'idle':
-        if (this.t > 0.7) this.advance();
+        if (this.t > 0.28) this.advance();
         break;
 
       case 'phaseshift':
-        if (this.t > 1.4) { this.state = 'idle'; this.t = 0; }
+        if (this.t > 1.1) { this.state = 'idle'; this.t = 0; }
         break;
 
       case 'fan':
         this.fanTimer -= dt;
         if (this.fanLeft > 0 && this.fanTimer <= 0) {
-          this.fanTimer = 0.75;
+          this.fanTimer = 0.42;
           this.fanLeft--;
           this.fireFan(player);
         }
-        if (this.fanLeft <= 0 && this.fanTimer <= -0.5) this.advance();
+        if (this.fanLeft <= 0 && this.fanTimer <= -0.25) this.advance();
         break;
 
       case 'arms':
@@ -383,6 +436,58 @@ export class Kernel {
         if (!this.projectiles.some((p) => p instanceof Wall)) this.advance();
         break;
     }
+  }
+
+  /**
+   * Where the next hole goes. Solid blocks in a bullet-hell arena can wall you
+   * into a pocket you cannot leave and then kill you while you stand in it, so
+   * every candidate is flood-filled first: it is only used if the player can
+   * still reach most of the room afterwards, and never right on top of them.
+   */
+  pickVoid(player, map, solids) {
+    const T = 16, W = 30, H = 16;
+    const blocked = (tx, ty, extra) => {
+      if (map.solidAt(tx, ty)) return true;
+      const cx = tx * T + T / 2, cy = ty * T + T / 2;
+      for (const s of solids) {
+        if (!s.solid || s.dead) continue;
+        if (Math.abs(cx - s.x) < 4 + s.hw && Math.abs(cy - s.y) < 5 + s.hh) return true;
+      }
+      return extra && extra.tx === tx && extra.ty === ty;
+    };
+
+    const reachable = (extra) => {
+      const px = Math.floor(player.x / T), py = Math.floor(player.y / T);
+      if (blocked(px, py, extra)) return 0;
+      const seen = new Set([py * W + px]);
+      const q = [[px, py]];
+      while (q.length) {
+        const [x, y] = q.pop();
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue;
+          const k = ny * W + nx;
+          if (seen.has(k) || blocked(nx, ny, extra)) continue;
+          seen.add(k); q.push([nx, ny]);
+        }
+      }
+      return seen.size;
+    };
+
+    const before = reachable(null);
+    for (let tries = 0; tries < 40; tries++) {
+      const tx = 2 + ((Math.random() * (W - 4)) | 0);
+      const ty = 2 + ((Math.random() * (H - 4)) | 0);
+      if (blocked(tx, ty, null)) continue;
+      const cx = tx * T + T / 2, cy = ty * T + T / 2;
+      // never drop one on the player, and never on the boss
+      if (Math.hypot(cx - player.x, cy - player.y) < 34) continue;
+      if (Math.hypot(cx - this.x, cy - this.y) < 30) continue;
+      // and never one that takes the room away
+      if (reachable({ tx, ty }) < before - 6) continue;
+      return { x: cx, y: cy };
+    }
+    return null;
   }
 
   /** Which floor tiles are blinking out, in phase two. */

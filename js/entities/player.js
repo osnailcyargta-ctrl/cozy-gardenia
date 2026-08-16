@@ -59,6 +59,11 @@ export class Player {
     // Scaled by the world, not by the player: book two's boss floods the room
     // and everyone in it wades from then on.
     this.speedMul = 1;
+    // A timed slow, kept apart from speedMul because the world rewrites that one
+    // every frame — book two's flood sets it from scratch, so a slow parked
+    // there would be wiped before it was ever felt.
+    this.slowFactor = 1;
+    this.slowUntil = 0;
 
     // Set while a boss is waking up or dying. The player still breathes and
     // blinks — they just don't get to act during someone else's moment.
@@ -140,6 +145,12 @@ export class Player {
    * It lasts as long as you stay in that book — the library hands out a fresh
    * Player, so walking home is what undoes it.
    */
+  /** Corrupt II also drags you: half speed for three seconds. */
+  slow(factor, seconds) {
+    this.slowFactor = Math.min(this.slowFactor, factor);
+    this.slowUntil = Math.max(this.slowUntil, seconds);
+  }
+
   corrupt(n, floor) {
     if (this.maxHp <= floor) return false;
     this.maxHp = Math.max(floor, this.maxHp - n);
@@ -198,6 +209,10 @@ export class Player {
 
     this.invuln = Math.max(0, this.invuln - dt);
     this.hurtFlash = Math.max(0, this.hurtFlash - dt);
+    if (this.slowUntil > 0) {
+      this.slowUntil -= dt;
+      if (this.slowUntil <= 0) this.slowFactor = 1;
+    }
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.attackT = Math.max(0, this.attackT - dt);
     this.dashCd = Math.max(0, this.dashCd - dt);
@@ -244,7 +259,7 @@ export class Player {
     // `speedMul` belongs to the world — book two's flood writes it every frame
     // and the library resets it — so the cheat multiplies on top rather than
     // fighting over the same field.
-    const sp = SPEED * (this.speedMul ?? 1) * dev.speedMul;
+    const sp = SPEED * (this.speedMul ?? 1) * this.slowFactor * dev.speedMul;
     const target = { x: ax.x * sp, y: ax.y * sp };
 
     // attacking roots you slightly — commitment makes combat readable

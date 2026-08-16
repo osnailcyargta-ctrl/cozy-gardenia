@@ -31,6 +31,7 @@ import * as shopUI from './ui/shopUI.js';
 import * as devUI from './ui/devUI.js';
 import * as puzzleUI from './ui/puzzleUI.js';
 import { Claw } from './entities/claw.js';
+import { Prop } from './entities/props.js';
 import { CORRUPT_BITE, CORRUPT_FLOOR } from './entities/nullbyte.js';
 
 /** How often a void bites whatever is standing beside it. */
@@ -670,6 +671,14 @@ function refreshInventory() {
  * next book on the shelf.
  */
 function onBossDefeated() {
+  // The dungeon has no ending, so the bosses it throws at you every fifteen
+  // rooms are not one. Marking book four cleared would be a lie the shelf then
+  // repeats back at you, and saveBook does not describe a generated book at all.
+  if (BOOKS[game.bookIndex]?.infinite) {
+    hud.hideBoss();
+    sfx.victory();
+    return;
+  }
   game.bookDefeated = true;
   game.cleared.add(game.bookIndex);
   save.markCleared(game.bookIndex);
@@ -845,6 +854,24 @@ function update(dt) {
 
   p.throwCool = Math.max(0, (p.throwCool || 0) - dt);
   p.update(dt, room.map, room.solids());
+
+  // The Kernel eats its own arena when it is left alive too long. It picks the
+  // squares itself (flood-filling so it can never wall you into a pocket) and
+  // hands them over here, because props belong to the room.
+  const kb = room.boss;
+  if (kb?.pendingVoids?.length) {
+    for (const v of kb.pendingVoids) {
+      room.props.push(new Prop('void', v.x, v.y, {}));
+      P.burst(v.x, v.y, 18, {
+        colour: '#000', speed: 70, life: 0.5, size: 3, drag: 0.9,
+      });
+      P.burst(v.x, v.y, 12, {
+        colour: '#5cff7a', speed: 90, life: 0.4, size: 2, drag: 0.9,
+        glow: 10, glowColour: 'rgba(38,194,71,ALPHA)',
+      });
+    }
+    kb.pendingVoids.length = 0;
+  }
 
   // Voids corrupt anything standing in the 3x3 of tiles around them. Done here
   // rather than in the prop because props are never handed the player.

@@ -220,6 +220,10 @@ export class DrownedQueen {
     this.x = x; this.y = y;
     this.homeX = x; this.homeY = y;
     this.isBoss = true;
+    // Scaled up when the dungeon spawns one at depth. Her tides and whirlpools
+    // are separate objects, so the multiplier is folded into the damage she
+    // hands them at construction rather than read from them later.
+    this.dmgMul = 1;
     this.name = 'The Drowned Queen';
     this.scale = 2;
     this.hw = 30; this.hh = 30;
@@ -358,11 +362,11 @@ export class DrownedQueen {
   spawnTide() {
     const dir = Math.random() < 0.5 ? 1 : -1;
     const gapY = 56 + Math.random() * (VH - 112);
-    this.projectiles.push(new Tide(dir, gapY, this.phase === 2 ? 250 : 190, 16));
+    this.projectiles.push(new Tide(dir, gapY, this.phase === 2 ? 250 : 190, Math.round(16 * this.dmgMul)));
     if (this.phase === 2) {
       // a second wall right behind the first, with its own gap
       this.projectiles.push(new Tide(dir, 56 + Math.random() * (VH - 112),
-        this.phase === 2 ? 250 : 190, 16));
+        this.phase === 2 ? 250 : 190, Math.round(16 * this.dmgMul)));
       this.projectiles[this.projectiles.length - 1].t = -0.55;
     }
   }
@@ -497,7 +501,7 @@ export class DrownedQueen {
           this.volleyLeft--;
           const a = Math.atan2(player.y - this.handY(), player.x - this.handX());
           this.projectiles.push(new Bubble(this.handX(), this.handY(), a, {
-            damage: 11, speed: 82,
+            damage: Math.round(11 * this.dmgMul), speed: 82,
             turn: this.phase === 2 ? 2.6 : 2,
             homeFor: this.phase === 2 ? 1.8 : 1.4,
           }));

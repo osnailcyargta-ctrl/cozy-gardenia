@@ -45,6 +45,10 @@ export class Fireball {
     this.trailT = 0;
     // homing fades out so the fireball can be dodged at the last moment
     this.homeFor = opts.homeFor ?? 1.5;
+    // Something extra a hit carries, over and above the damage. The Kernel uses
+    // it to hang corruption and a slow off every shot it fires; nothing else
+    // passes it, so nothing else changes.
+    this.onHitPlayer = opts.onHitPlayer || null;
 
     // Fireballs can be batted out of the air. Integrity is a pool rather than a
     // swing counter so mixing weapons on one fireball still behaves sensibly:
@@ -148,6 +152,7 @@ export class Fireball {
     if (this.knockT <= 0 &&
         Math.hypot(player.x - this.x, player.y - this.y) < this.radius + 5) {
       player.hurt(this.damage, this.x, this.y);
+      this.onHitPlayer?.(player);
       this.pop();
     }
   }

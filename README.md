@@ -49,8 +49,20 @@ an endless thing endured.
 2. **Stack Trace** — two of them.
 3. **Heap** — a **Nullbyte Nest**: a 2×2 block that summons two more, four times, ten seconds apart.
 4. **Kernel Space** — four at once.
-5. **The Kernel** — the boss: sweeping laser arms, rings of bullets fired all at once, and walls of
-   light with a single gap. 400 HP, two phases.
+5. **The Kernel** — the final boss. **1200 HP**, two phases, and everything it does comes in fours:
+   **eight sweeping laser arms** (twelve in phase two), **forty bullets** in a single ring (fifty-six
+   in phase two), and walls of light with one gap. Every warning is shorter than book three's and
+   every gap between attacks is smaller.
+
+   **Everything it throws carries Corrupt II** — a whole heart of max health rather than half, down to
+   a floor of **five hearts** rather than seven and a half, and it drags you to half speed for three
+   seconds on top.
+
+   **Leave it alive too long and it starts eating its own room.** After 25 seconds it punches a void
+   through the arena floor every 3.5 seconds, up to sixteen of them. They are solid. Every one is
+   flood-filled before it is placed: it is never dropped on you, and never anywhere that would wall
+   you into a pocket you cannot leave — a bullet-hell arena that can trap you is a bullet-hell arena
+   that kills you while you stand still.
 
 **Every doorway is an errored gate.** You cannot hit it open and there is no key. Behind it is a 5×5
 grid holding one block, some walls, and one hole. **Swipe** and the block steps one square that way;
@@ -113,6 +125,13 @@ and no ending — only how far down you are willing to go.
 - **The rooms do not exist until you reach them.** Each is generated from a seed, flood-filled to
   prove it can be crossed, and **released the moment you leave it**. There is no `B` tile anywhere in
   this book: the door behind you is not locked, it is gone.
+- **Every fifteenth room is a boss.** Dragon King, Drowned Queen or The Kernel, drawn at random — the
+  Kernel rarest of the three, because it is book three's ending and turning up every other time would
+  spend it. The boss carries the Crypt Key like anything else down here. Landings come every ten, so
+  rooms 30, 60 and 90 would be both; the landing keeps its room and the boss slides one deeper, which
+  is why they arrive at 15, 31, 45, 61, 75, 91. Bosses take **half** the dungeon's stat curve — at the
+  full multiplier a Kernel at room 61 is 3500 HP and a twenty minute fight. Killing one does not mark
+  the book finished: this book has no ending.
 - **Every tenth room is a landing** — no enemies, a portal home in the middle, a merchant, and often
   an anvil or a smelter. Entering the book puts you on the deepest landing you have reached, and so
   does dying. What a death costs you is the descent since the last landing, never the depth itself.
@@ -316,11 +335,13 @@ does nothing, because bare hands deal zero damage.
 | Siren I / II | 55 HP / 100 HP (tier II has 3 armour) |
 | Dragon King | 450 HP, phase 2 at 225 |
 | Drowned Queen | 600 HP, phase 2 at 300 |
-| The Kernel | 400 HP, phase 2 at 200 |
+| The Kernel | 1200 HP, phase 2 at 600 |
 | Nullbyte | 40 HP · 8 damage · untouchable while it corrupts |
 | Corruption | −half a heart of MAX health per hit, down to 7.5 hearts |
 | Digital Claw Cannon | 6 melee / 18 thrown · 2% drop from a Nullbyte |
 | Void | corrupts every 1.5s within 3×3 tiles · solid |
+| Corrupt I | −half a heart of MAX health · floor 7.5 hearts |
+| Corrupt II | −1 heart of MAX health · floor 5 hearts · half speed for 3s |
 | New room | +3 hearts, once per room |
 | Siren I / II | ~5.2s between attacks |
 | Drowned Thrall | ~2.6s between lunges |
