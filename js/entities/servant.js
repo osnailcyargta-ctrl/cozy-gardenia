@@ -152,7 +152,7 @@ export class Servant {
         my = (dy / dist) * S * 0.3;
         if (this.t > 0.18 && !this.hitThisAttack) {
           this.hitThisAttack = true;
-          if (dist < 26) player.hurt(this.cfg.damage, this.x, this.y);
+          if (dist < 26) player.hurt(Math.round(this.cfg.damage * (this.dmgMul ?? 1)), this.x, this.y);
           P.burst(this.x + Math.cos(ang) * 10, this.y + Math.sin(ang) * 10, 5, {
             colour: '#ffb648', speed: 60, life: 0.22, size: 2, glow: 10,
           });
@@ -212,7 +212,7 @@ export class Servant {
 
         if (!this.hitThisAttack && dist < 16) {
           this.hitThisAttack = true;
-          player.hurt(this.cfg.dashDamage, this.x, this.y);
+          player.hurt(Math.round(this.cfg.dashDamage * (this.dmgMul ?? 1)), this.x, this.y);
           cam.shake(6, 0.3);
         }
 

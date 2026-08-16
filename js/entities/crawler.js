@@ -107,7 +107,7 @@ export class Crawler {
         my = (dy / dist) * SPEED * 1.6;
         if (this.t > 0.22 && !this.bitThisAttack) {
           this.bitThisAttack = true;
-          if (dist < 20) player.hurt(this.damage, this.x, this.y);
+          if (dist < 20) player.hurt(Math.round(this.damage * (this.dmgMul ?? 1)), this.x, this.y);
           P.burst(this.x + (dx / dist) * 8, this.y + (dy / dist) * 8, 4, {
             colour: '#cc3340', speed: 55, life: 0.2, size: 2,
           });

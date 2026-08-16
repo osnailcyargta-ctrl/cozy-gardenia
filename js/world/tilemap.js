@@ -28,7 +28,10 @@ export class TileMap {
     return this.rows[ty][tx];
   }
 
-  solidAt(tx, ty) { return isSolidChar(this.at(tx, ty)); }
+  solidAt(tx, ty) {
+    if (this.rateOpen?.has(ty * this.w + tx)) return false;
+    return isSolidChar(this.at(tx, ty));
+  }
 
   /** Solid test in pixel space. */
   solidPx(px, py) {
@@ -76,6 +79,28 @@ export class TileMap {
     const water = this.floorStyle === 'water';
     const crypt = this.floorStyle === 'crypt';
     const digital = this.floorStyle === 'digital';
+
+    if (this.floorStyle === 'null') {
+      x.fillStyle = '#000';
+      x.fillRect(px, py, TILE, TILE);
+      const n = hash(tx, ty, 17);
+      if (n > 0.78) {
+        // dried, then fresher on top of it
+        x.fillStyle = 'rgba(58,8,12,0.9)';
+        x.fillRect(px + ((n * 9) | 0), py + ((n * 7) | 0), 3 + ((n * 5) | 0), 2 + ((n * 3) | 0));
+      }
+      if (n > 0.93) {
+        x.fillStyle = 'rgba(122,16,24,0.85)';
+        x.fillRect(px + 4, py + 6, 5, 3);
+        x.fillStyle = 'rgba(168,22,32,0.7)';
+        x.fillRect(px + 6, py + 5, 2, 2);
+      }
+      if (n < 0.06) {
+        x.fillStyle = 'rgba(90,10,16,0.75)';
+        x.fillRect(px + 2, py + 11, 9, 2);
+      }
+      return;
+    }
 
     if (digital) {
       // A dark grid with a scan line crawling down it, and the odd tile holding
@@ -238,6 +263,28 @@ export class TileMap {
     const crypt = this.floorStyle === 'crypt';
     const digital = this.floorStyle === 'digital';
 
+    if (this.floorStyle === 'null') {
+      x.fillStyle = '#000';
+      x.fillRect(px, py, TILE, TILE);
+      const n = hash(tx, ty, 17);
+      if (n > 0.78) {
+        // dried, then fresher on top of it
+        x.fillStyle = 'rgba(58,8,12,0.9)';
+        x.fillRect(px + ((n * 9) | 0), py + ((n * 7) | 0), 3 + ((n * 5) | 0), 2 + ((n * 3) | 0));
+      }
+      if (n > 0.93) {
+        x.fillStyle = 'rgba(122,16,24,0.85)';
+        x.fillRect(px + 4, py + 6, 5, 3);
+        x.fillStyle = 'rgba(168,22,32,0.7)';
+        x.fillRect(px + 6, py + 5, 2, 2);
+      }
+      if (n < 0.06) {
+        x.fillStyle = 'rgba(90,10,16,0.75)';
+        x.fillRect(px + 2, py + 11, 9, 2);
+      }
+      return;
+    }
+
     if (digital) {
       // A dark grid with a scan line crawling down it, and the odd tile holding
       // a bit that flickers. Deterministic per tile — a value re-rolled every
@@ -276,6 +323,16 @@ export class TileMap {
     // Book three's walls are machine casing, not stone: a colder, bluer black
     // than its green-black floor, so the boundary is a change of material and
     // not just a change of brightness. Matched values read as one surface.
+    if (this.floorStyle === 'null') {
+      x.fillStyle = '#000';
+      x.fillRect(px, py, TILE, TILE);
+      if (hash(tx, ty, 23) > 0.85) {
+        x.fillStyle = 'rgba(74,10,16,0.8)';
+        x.fillRect(px + 3, py + TILE - 5, TILE - 6, 4);
+      }
+      return;
+    }
+
     x.fillStyle = this.floorStyle === 'digital'
       ? ['#0a1420', '#0c1826', '#08111c'][((tx * 5 + ty * 3) >>> 0) % 3]
       : ['#100d19', '#141020', '#0d0a15'][((tx * 5 + ty * 3) >>> 0) % 3];

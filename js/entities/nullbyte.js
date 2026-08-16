@@ -139,7 +139,7 @@ export class Nullbyte {
         my = (dy / dist) * SPEED * 0.4;
         if (this.t > 0.2 && !this.hitThisAttack) {
           this.hitThisAttack = true;
-          if (dist < 24) player.hurt(this.damage, this.x, this.y);
+          if (dist < 24) player.hurt(Math.round(this.damage * (this.dmgMul ?? 1)), this.x, this.y);
         }
         if (this.t > 0.45) { this.state = REST; this.t = 0; }
         break;

@@ -148,7 +148,7 @@ export class Thrall {
         my = Math.sin(this.lungeAngle) * sp;
         if (!this.hitThisAttack && dist < 16) {
           this.hitThisAttack = true;
-          player.hurt(8, this.x, this.y);
+          player.hurt(Math.round(8 * (this.dmgMul ?? 1)), this.x, this.y);
         }
         if (this.t > 0.3) { this.state = REST; this.t = 0; }
         break;
@@ -362,7 +362,7 @@ export class Siren {
         }
         if (!this.pulled && dist < 26) {
           this.pulled = true;
-          player.hurt(this.cfg.pullDamage, this.x, this.y);
+          player.hurt(Math.round(this.cfg.pullDamage * (this.dmgMul ?? 1)), this.x, this.y);
         }
         if (this.t > 0.5) {
           this.state = S_BOLT; this.t = 0;

@@ -160,8 +160,10 @@ export function refreshAnvil() {
   const reforgeBtn = document.getElementById('reforge-btn');
   const info = document.getElementById('reforge-info');
 
-  reforgeBtn.disabled = !held || coins < REFORGE_COST;
-  reforgeBtn.textContent = `Reforge · ${REFORGE_COST}c`;
+  // A coupon is spent before coins are, and says so on the button.
+  const coupons = inv.count('reforge_coupon');
+  reforgeBtn.disabled = !held || (coupons < 1 && coins < REFORGE_COST);
+  reforgeBtn.textContent = coupons > 0 ? `Reforge · free (${coupons})` : `Reforge · ${REFORGE_COST}c`;
 
   if (!held) {
     info.textContent = 'Hold a weapon to reforge it.';
@@ -214,7 +216,8 @@ function onReforge() {
   const inv = game.inventory;
   const held = heldWeapon();
   if (!held) { sfx.denied(); return; }
-  if (inv.count('gold_coin') < REFORGE_COST) {
+  const hasCoupon = inv.count('reforge_coupon') > 0;
+  if (!hasCoupon && inv.count('gold_coin') < REFORGE_COST) {
     anvilMsg.textContent = `Reforging costs ${REFORGE_COST} coins.`;
     anvilMsg.className = 'err';
     anvilMsg.style.color = '';
@@ -222,7 +225,8 @@ function onReforge() {
     return;
   }
 
-  inv.remove('gold_coin', REFORGE_COST);
+  if (hasCoupon) inv.remove('reforge_coupon', 1);
+  else inv.remove('gold_coin', REFORGE_COST);
   const mod = rollReforge();
   if (mod) held.mod = mod; else delete held.mod;
 

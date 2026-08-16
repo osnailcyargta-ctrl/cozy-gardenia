@@ -347,9 +347,10 @@ export class Kernel {
 
   /** A whole ring of bullets on one frame — nothing else in the game does this. */
   fireFan(player) {
-    // Four times the bullets. A ring this dense has to keep its shape or it is
-    // just noise, which is why none of them steer.
-    const n = (this.phase === 2 ? 14 : 10) * 4;
+    // Twice the bullets it had, not four times: at forty a ring stopped being a
+    // pattern with gaps in it and became a wall. None of them steer, because a
+    // ring only reads as a ring if it keeps its shape.
+    const n = (this.phase === 2 ? 14 : 10) * 2;
     const base = Math.atan2(player.y - this.y, player.x - this.x) + Math.random() * 0.3;
     for (let i = 0; i < n; i++) {
       const a = base + (i / n) * Math.PI * 2;

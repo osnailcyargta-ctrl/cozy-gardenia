@@ -29,7 +29,11 @@ export function refresh() {
     const b = BOOKS[Number(el.dataset.book)];
     // An endless book has no rooms table but is very much written.
     const written = !!(b?.rooms || b?.infinite);
-    const sealed = !written || (b.needs !== undefined && !game?.cleared?.has(b.needs));
+    // Two different locks. `needs` asks whether you read a book; `needsHard`
+    // asks whether you survived it on hard, which is what book three wants.
+    const sealed = !written
+      || (b.needs !== undefined && !game?.cleared?.has(b.needs))
+      || (b.needsHard !== undefined && !game?.hardCleared?.has(b.needsHard));
 
     el.classList.toggle('locked', sealed);
     el.querySelector('.book-title').textContent = written ? b.title : '???';

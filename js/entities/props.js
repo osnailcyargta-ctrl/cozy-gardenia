@@ -51,6 +51,9 @@ export class Prop {
       // A hole punched through the floor. Solid like a chest or an anvil — you
       // walk around it, never through it — and nothing to interact with.
       void:      [7, 7,  true,  null],
+      // Bolted to the wall above the first gate. Not solid — it is above head
+      // height — but you can reach it and throw it.
+      lever:     [6, 8,  false, 'Difficulty'],
       // The portal is walked into, not walked around — it is the only way out
       // of the dungeon and it must never be something you can get stuck behind.
       portal:    [0, 0,  false, 'Portal'],
@@ -96,6 +99,11 @@ export class Prop {
 
     // The void corrupts anything standing in the 3x3 of tiles around it, once
     // every 1.5s. Its own clock, so two voids never share a timer.
+    if (type === 'lever') {
+      this.on = false;
+      this.throwT = 1;     // 0..1 through the swing of the handle
+    }
+
     if (type === 'void') {
       this.bite = 0;
       this.digits = [];
@@ -162,6 +170,18 @@ export class Prop {
       });
     }
 
+    if (this.type === 'lever') {
+      this.throwT = Math.min(1, this.throwT + dt * 4.5);
+      if (this.on && Math.random() > 0.9) {
+        P.spawn({
+          x: this.x + (Math.random() - 0.5) * 8, y: this.y - 6,
+          vx: 0, vy: -14 - Math.random() * 10,
+          life: 0.6, size: 1, colour: '#ff6a4c', drag: 0.96,
+          glow: 7, glowColour: 'rgba(255,106,76,ALPHA)',
+        });
+      }
+    }
+
     if (this.type === 'void') {
       this.bite = Math.max(0, this.bite - dt);
       // a column of ones and zeroes rising out of the hole
@@ -225,6 +245,7 @@ export class Prop {
   draw(ctx, room) {
     if (this.type === 'portal') { this.drawPortal(ctx); return; }
     if (this.type === 'void') { this.drawVoid(ctx); return; }
+    if (this.type === 'lever') { this.drawLever(ctx); return; }
 
     const spr = this.sprite(room);
 
@@ -317,6 +338,49 @@ export class Prop {
     ctx.restore();
   }
 
+  /**
+   * A wall switch. The handle swings between down and up over a few frames
+   * rather than snapping, because a lever that teleports between two positions
+   * does not read as something you pulled.
+   */
+  drawLever(ctx) {
+    const x = Math.round(this.x), y = Math.round(this.y);
+
+    // the plate it is bolted to
+    ctx.fillStyle = '#241d33';
+    ctx.fillRect(x - 5, y - 7, 10, 15);
+    ctx.fillStyle = '#3b3050';
+    ctx.fillRect(x - 5, y - 7, 10, 1);
+    ctx.fillRect(x - 5, y + 7, 10, 1);
+    ctx.fillStyle = '#171226';
+    ctx.fillRect(x - 3, y - 5, 6, 11);
+
+    // The handle swings between two rest angles, eased. `on` is already the new
+    // state when this runs, so it animates from the old position to the new one.
+    const k = this.throwT * this.throwT * (3 - 2 * this.throwT);
+    const OFF = (140 * Math.PI) / 180;      // down and to the left
+    const ON = (-40 * Math.PI) / 180;       // up and to the right
+    const start = this.on ? OFF : ON;
+    const ang = start + ((this.on ? ON : OFF) - start) * k;
+    const tipX = x + Math.cos(ang) * 7;
+    const tipY = y + Math.sin(ang) * 7;
+
+    ctx.strokeStyle = '#6d5f8a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(tipX, tipY);
+    ctx.stroke();
+
+    // the knob, and its colour is the whole message: red means hard
+    ctx.fillStyle = this.on ? '#ff3355' : '#7d92a6';
+    ctx.beginPath();
+    ctx.arc(tipX, tipY, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = this.on ? '#ffb0be' : '#cfd8e2';
+    ctx.fillRect(Math.round(tipX) - 1, Math.round(tipY) - 1, 1, 1);
+  }
+
   drawPortal(ctx) {
     const t = this.t;
     const x = this.x, y = this.y;
@@ -397,6 +461,10 @@ export class Prop {
       case 'void':
         // it does not light the room, it eats the light — a thin sour rim only
         addLight(ctx, this.x, this.y, 16, 'rgba(38,194,71,ALPHA)', 0.3);
+        break;
+      case 'lever':
+        addLight(ctx, this.x, this.y, this.on ? 30 : 18,
+          this.on ? 'rgba(255,51,85,ALPHA)' : 'rgba(160,180,220,ALPHA)', this.on ? 0.6 : 0.3);
         break;
       case 'smelter': {
         if (room?.smelter?.burning) {

@@ -32,6 +32,7 @@ import * as devUI from './ui/devUI.js';
 import * as puzzleUI from './ui/puzzleUI.js';
 import { Claw } from './entities/claw.js';
 import { Prop } from './entities/props.js';
+import * as rates from './world/spawnrates.js';
 import { CORRUPT_BITE, CORRUPT_FLOOR } from './entities/nullbyte.js';
 
 /** How often a void bites whatever is standing beside it. */
@@ -52,11 +53,17 @@ const game = {
   smelter: new Smelter(),
   bookIndex: 0,
   bookDefeated: false,
+  // Hard is a property of the run, not of the save. `pendingHard` is what the
+  // lever sets; it only becomes real when you walk out of room one, so the
+  // lever can be thrown back and forth as much as you like before committing.
+  hard: false,
+  pendingHard: false,
   // book four only: how deep this run is, and the deepest landing reached
   depth: 0,
   milestone: 0,
   runSeed: 1,
   cleared: save.cleared(),
+  hardCleared: save.hardCleared(),
   paused: false,
   time: 0,
 
@@ -70,10 +77,19 @@ const game = {
   onBossDefeated,
   // console escape hatches
   unlockAll: () => {
-    BOOKS.forEach((b, i) => { if (b.rooms || b.infinite) { game.cleared.add(i); save.markCleared(i); } });
+    BOOKS.forEach((b, i) => {
+      if (!b.rooms && !b.infinite) return;
+      game.cleared.add(i); save.markCleared(i);
+      game.hardCleared.add(i); save.markHardCleared(i);
+    });
     shelfUI.refresh();
   },
-  wipeSave: () => { save.wipe(); game.cleared = new Set(); shelfUI.refresh(); },
+  wipeSave: () => {
+    save.wipe();
+    game.cleared = new Set();
+    game.hardCleared = new Set();
+    shelfUI.refresh();
+  },
 };
 
 window.game = game;   // handy for debugging from the console
@@ -185,6 +201,8 @@ function enterBook(index) {
 
   game.bookIndex = index;
   game.bookDefeated = false;
+  game.hard = false;
+  game.pendingHard = false;
   // Book three eats the top off your health bar and the library gives it back.
   // That already happens because goToLibrary builds a fresh Player, but relying
   // on a side effect for a rule the player can feel is asking for it.
@@ -197,6 +215,11 @@ function enterBook(index) {
 
   // fresh run: rebuild rooms and the forge. Chests carry their own contents.
   game.rooms = book.rooms.map((def, i) => new Room(def, save.deadEnemies(index, i)));
+  // The lever is bolted up there from the start, but there is nothing to choose
+  // between until you have read the book once.
+  if (!game.cleared.has(index)) {
+    for (const r of game.rooms) r.props = r.props.filter((pr) => pr.type !== 'lever');
+  }
   game.roomIndex = 0;
 
   // Gates you broke stay broken, chests you emptied stay empty, and the forge
@@ -219,6 +242,8 @@ function enterBook(index) {
  * released rather than kept.
  */
 function enterDungeon(index) {
+  rates.resetRates();
+  game.rateRoom = false;
   game.rooms = new Map();
   game.milestone = save.deepest(index);
   // Minted once and then kept. A fresh seed every visit meant the same landing
@@ -286,6 +311,8 @@ function loadDepth(depth) {
 const inDungeon = () => game.scene === 'book' && BOOKS[game.bookIndex]?.infinite;
 
 function loadRoom(index, dir) {
+  // Leaving room one is what locks the difficulty in for this run.
+  if (game.scene === 'book' && game.roomIndex === 0 && index > 0) commitDifficulty();
   game.roomIndex = index;
   const room = game.rooms[index];
   game.room = room;
@@ -351,6 +378,88 @@ function summonFromNest(prop) {
     });
   }
   return true;
+}
+
+/**
+ * The difficulty lever, bolted above the first gate of a book you have already
+ * finished. Throwing it arms hard mode; walking out of room one is what commits
+ * to it, and committing rebuilds the whole book — every enemy you already killed
+ * on this visit stands back up, carrying the hard numbers.
+ */
+function throwLever(prop) {
+  if (game.roomIndex !== 0) { sfx.denied(); return false; }
+  prop.on = !prop.on;
+  prop.throwT = 0;
+  game.pendingHard = prop.on;
+  sfx.unlock();
+  cam.shake(3, 0.2);
+  P.burst(prop.x, prop.y, 10, {
+    colour: prop.on ? '#ff3355' : '#7d92a6', speed: 70, life: 0.4, size: 2, drag: 0.9,
+    glow: 9, glowColour: prop.on ? 'rgba(255,51,85,ALPHA)' : 'rgba(160,180,220,ALPHA)',
+  });
+  return true;
+}
+
+/**
+ * Called on the way out of room one. Rebuilding from the definitions with no
+ * dead-set is the whole point: a book half-cleared on normal and half on hard
+ * would have two different games in it.
+ */
+function commitDifficulty() {
+  if (game.pendingHard === game.hard) return;
+  game.hard = game.pendingHard;
+  const book = BOOKS[game.bookIndex];
+  if (!book?.rooms) return;
+  game.rooms = book.rooms.map((def) => {
+    const r = new Room(def, new Set());
+    r.hard = game.hard;
+    return r;
+  });
+  for (const r of game.rooms) r.applyHard?.();
+}
+
+function loadRateOverride() {
+  game.rateRoom = true;
+  const r = new Room(rates.OVERRIDE_ROOM, new Set());
+  game.room = r;
+  game.player.x = rates.OVERRIDE_ROOM.spawn.x;
+  game.player.y = rates.OVERRIDE_ROOM.spawn.y;
+  game.player.hp = game.player.maxHp;
+  hud.setRoom('');
+  cam.shake(9, 0.9);
+  sfx.death();
+  for (let i = 0; i < 40; i++) {
+    P.spawn({
+      x: Math.random() * VW, y: Math.random() * VH,
+      vx: (Math.random() - 0.5) * 90, vy: (Math.random() - 0.5) * 90,
+      life: 0.9, size: 2, colour: Math.random() > 0.5 ? '#7a1018' : '#a8161f',
+      drag: 0.93,
+    });
+  }
+}
+
+/** What each book's boss calls in when hard mode pushes it into phase two. */
+const ESCORT = ['servant1', 'thrall', 'nullbyte'];
+
+function summonEscort(boss) {
+  const kind = ESCORT[game.bookIndex] || 'servant1';
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2;
+    const e = makeEnemy(kind, boss.x + Math.cos(a) * 52, boss.y + Math.sin(a) * 44);
+    if (!e) continue;
+    e.defIndex = -1;                 // called in, never part of the room's roster
+    e.maxHp = Math.round(e.maxHp * 1.25);
+    e.hp = e.maxHp;
+    if (typeof e.damage === 'number') e.damage = Math.round(e.damage * 1.5);
+    e.dmgMul = 1.5;
+    game.room.enemies.push(e);
+    P.burst(e.x, e.y, 12, {
+      colour: '#ff3355', speed: 90, life: 0.45, size: 2, drag: 0.9,
+      glow: 10, glowColour: 'rgba(255,51,85,ALPHA)',
+    });
+  }
+  sfx.roar();
+  cam.shake(6, 0.5);
 }
 
 /** Three hearts, in the HP the hearts are actually made of. */
@@ -506,11 +615,14 @@ function doInteract(prop) {
       sfx.uiBig();
       return true;
     case 'merchant':
+      if (inDungeon()) rates.noteVendorVisit(game.depth);
       shopUI.open(prop);
       return true;
     case 'gate':
       puzzleUI.open(prop);
       return true;
+    case 'lever':
+      return throwLever(prop);
     case 'nullbyteNest':
       return summonFromNest(prop);
     case 'portal':
@@ -632,8 +744,8 @@ function locked(index) {
   const b = BOOKS[index];
   if (!b || (!b.rooms && !b.infinite)) return true;
   if (b.needs !== undefined && !game.cleared.has(b.needs)) return true;
-  // Book three wants a story finished AND a depth survived.
-  if (b.needsDepth !== undefined && save.deepest(3) < b.needsDepth) return true;
+  // Book three does not want the story finished. It wants it survived on hard.
+  if (b.needsHard !== undefined && !game.hardCleared.has(b.needsHard)) return true;
   return false;
 }
 
@@ -682,6 +794,10 @@ function onBossDefeated() {
   game.bookDefeated = true;
   game.cleared.add(game.bookIndex);
   save.markCleared(game.bookIndex);
+  if (game.hard) {
+    game.hardCleared.add(game.bookIndex);
+    save.markHardCleared(game.bookIndex);
+  }
   save.saveBook(game.bookIndex, game.rooms, game.inventory, hotbar.selectedIndex(), game.smelter);
   hud.hideBoss();
   sfx.victory();
@@ -858,6 +974,19 @@ function update(dt) {
   // The Kernel eats its own arena when it is left alive too long. It picks the
   // squares itself (flood-filling so it can never wall you into a pocket) and
   // hands them over here, because props belong to the room.
+  if (inDungeon() && !game.rateRoom && rates.applyRates(room, game.depth, p)) {
+    loadRateOverride();
+    return;
+  }
+
+  const bossNow = room.boss;
+  if (game.hard && bossNow && !bossNow.dead) {
+    if (bossNow.phase === 2 && !bossNow.__calledFor) {
+      bossNow.__calledFor = true;
+      summonEscort(bossNow);
+    }
+  }
+
   const kb = room.boss;
   if (kb?.pendingVoids?.length) {
     for (const v of kb.pendingVoids) {

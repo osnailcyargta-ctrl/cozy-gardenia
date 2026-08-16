@@ -175,6 +175,7 @@ export class Player {
       ? this.weapon.cooldown
       : this.attackT + this.weapon.cooldown;
     this.swungThisAttack = false;
+    this.sigThisAttack = false;
     sfx.swing();
 
     // face the swing
@@ -398,26 +399,118 @@ export class Player {
     const a0 = this.attackAngle - this.weapon.arc / 2;
     const a = a0 + this.weapon.arc * k;
     const r = this.weapon.range * 0.78;
-    const fist = this.weapon.isFist;
+    const kind = this.weapon.isFist ? 'fist' : (this.weapon.kind || 'blade');
+
+    // Every weapon swings through the same arc; what differs is what the arc
+    // leaves behind. The look is picked once here rather than branched at every
+    // draw call below.
+    const LOOK = {
+      fist:  { trail: '#c98f5e', edge: '#ffd9a8', size: 2, spark: '#ffb648', glow: 'rgba(255,180,110,ALPHA)' },
+      // `melee` is what the swords actually call themselves; `blade` is the
+      // fallback name, and both want the same steel.
+      melee: { trail: '#dceaff', edge: '#ffffff', size: 3, spark: '#bcd8ff', glow: 'rgba(190,220,255,ALPHA)' },
+      blade: { trail: '#dceaff', edge: '#ffffff', size: 3, spark: '#bcd8ff', glow: 'rgba(190,220,255,ALPHA)' },
+      claw:  { trail: '#26c247', edge: '#c8ffd4', size: 3, spark: '#5cff7a', glow: 'rgba(38,194,71,ALPHA)' },
+      wave:  { trail: '#70dad4', edge: '#d6fffb', size: 3, spark: '#70dad4', glow: 'rgba(112,218,212,ALPHA)' },
+      place: { trail: '#a866e0', edge: '#ddb4ff', size: 3, spark: '#c78cff', glow: 'rgba(168,102,224,ALPHA)' },
+    }[kind] || { trail: '#dceaff', edge: '#ffffff', size: 3, spark: '#bcd8ff', glow: 'rgba(190,220,255,ALPHA)' };
 
     ctx.save();
     ctx.globalCompositeOperation = 'lighter';
 
-    // arc smear behind the leading edge
-    for (let i = 0; i < 6; i++) {
-      const t = k - i * 0.055;
-      if (t < 0) continue;
+    // A ribbon swept between the trailing and leading edge, rather than six
+    // loose dots. This is what makes a swing read as one motion.
+    const steps = 9;
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const t = k - (i / steps) * 0.55;
+      if (t < 0) break;
       const aa = a0 + this.weapon.arc * t;
-      const alpha = (1 - i / 6) * 0.5;
-      ctx.globalAlpha = alpha;
-      ctx.fillStyle = this.weapon.kind === 'claw' ? (i < 2 ? '#c8ffd4' : '#26c247')
-        : fist ? '#c98f5e' : '#dceaff';
-      const px = this.x + Math.cos(aa) * r;
-      const py = this.y - 3 + Math.sin(aa) * r;
-      ctx.fillRect(Math.round(px) - 1, Math.round(py) - 1, fist ? 2 : 3, fist ? 2 : 3);
+      const rr = r * (1 - (i / steps) * 0.16);
+      const px = this.x + Math.cos(aa) * rr;
+      const py = this.y - 3 + Math.sin(aa) * rr;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
     }
+    ctx.strokeStyle = LOOK.trail;
+    ctx.globalAlpha = 0.45;
+    ctx.lineWidth = LOOK.size + 2;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = LOOK.edge;
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+
+    // the leading point, brightest
+    const lx = this.x + Math.cos(a) * r;
+    const ly = this.y - 3 + Math.sin(a) * r;
     ctx.globalAlpha = 1;
+    ctx.fillStyle = LOOK.edge;
+    ctx.fillRect(Math.round(lx) - 1, Math.round(ly) - 1, LOOK.size, LOOK.size);
     ctx.restore();
+
+    // And a signature per weapon, thrown exactly once per swing. Keyed off a
+    // flag rather than off attackT, which changes every frame and would have
+    // fired this on all of the first few.
+    if (!this.sigThisAttack && k > 0.12) {
+      this.sigThisAttack = true;
+      this.swingSignature(kind, a, r, LOOK);
+    }
+  }
+
+  /**
+   * The bit that is different per weapon. Fists puff dust, a blade throws a
+   * clean spark line, the claw sheds binary, the wave gun breathes mist, and the
+   * nest placer drops a violet ring.
+   */
+  swingSignature(kind, a, r, LOOK) {
+    const tx = this.x + Math.cos(a) * r;
+    const ty = this.y - 3 + Math.sin(a) * r;
+
+    if (kind === 'fist') {
+      P.burst(tx, ty, 5, {
+        colour: LOOK.spark, speed: 40, life: 0.22, size: 1, drag: 0.86,
+        angle: a, spread: 1.5, grav: 60,
+      });
+      return;
+    }
+    if (kind === 'claw') {
+      for (let i = 0; i < 6; i++) {
+        P.spawn({
+          x: tx + (Math.random() - 0.5) * 8, y: ty + (Math.random() - 0.5) * 8,
+          vx: Math.cos(a) * 50 + (Math.random() - 0.5) * 40,
+          vy: Math.sin(a) * 50 + (Math.random() - 0.5) * 40,
+          life: 0.3, size: 1, colour: Math.random() > 0.5 ? LOOK.spark : LOOK.trail,
+          drag: 0.9, glow: 7, glowColour: LOOK.glow,
+        });
+      }
+      return;
+    }
+    if (kind === 'wave') {
+      P.burst(tx, ty, 9, {
+        colour: LOOK.spark, speed: 55, life: 0.4, size: 2, drag: 0.93,
+        angle: a, spread: 1.1, glow: 9, glowColour: LOOK.glow,
+      });
+      return;
+    }
+    if (kind === 'place') {
+      for (let i = 0; i < 10; i++) {
+        const ang = (i / 10) * Math.PI * 2;
+        P.spawn({
+          x: tx + Math.cos(ang) * 5, y: ty + Math.sin(ang) * 4,
+          vx: Math.cos(ang) * 34, vy: Math.sin(ang) * 26,
+          life: 0.35, size: 2, colour: LOOK.spark, drag: 0.9,
+          glow: 9, glowColour: LOOK.glow,
+        });
+      }
+      return;
+    }
+    // a blade: a tight line of sparks flung off the tip, along the arc
+    P.burst(tx, ty, 7, {
+      colour: LOOK.spark, speed: 90, life: 0.28, size: 2, drag: 0.88,
+      angle: a + Math.PI / 2, spread: 0.7, grav: 120,
+      glow: 8, glowColour: LOOK.glow,
+    });
   }
 
   drawLight(ctx) {

@@ -167,14 +167,12 @@ export function isBossDepth(depth) {
 }
 
 /**
- * Which one shows up. The Kernel is the rare one: it is book three's ending and
- * it stays worth something by not turning up every other time.
+ * Which one shows up.
  */
 function pickBoss(rand) {
-  const r = rand();
-  if (r < 0.42) return 'king';
-  if (r < 0.84) return 'queen';
-  return 'kernel';
+  // The Kernel is not down here. It is book three's ending and it only ever
+  // happens once, at the end of book three.
+  return rand() < 0.5 ? 'king' : 'queen';
 }
 
 export function makeRoom(runSeed, depth) {

@@ -41,17 +41,16 @@ Nothing here is hoarded and nothing drops coin. The queen is not greedy.
 
 ### Book three — *Digital Matrix*
 
-Chained until **two** things are true: book two finished, and ten rooms deep into the dungeon
-survived. It is the only book with two locks, and it wants one of each kind — a story completed and
-an endless thing endured.
+Chained until you have finished **Underwater Mommy on hard**. Not finished — survived the hard way.
+It is the only book whose lock asks a different question from "have you read this".
 
 1. **Boot Sector** — one Nullbyte, and the first errored gate.
 2. **Stack Trace** — two of them.
 3. **Heap** — a **Nullbyte Nest**: a 2×2 block that summons two more, four times, ten seconds apart.
 4. **Kernel Space** — four at once.
 5. **The Kernel** — the final boss. **1200 HP**, two phases, and everything it does comes in fours:
-   **eight sweeping laser arms** (twelve in phase two), **forty bullets** in a single ring (fifty-six
-   in phase two), and walls of light with one gap. Every warning is shorter than book three's and
+   **eight sweeping laser arms** (twelve in phase two), **twenty bullets** in a single ring
+   (twenty-eight in phase two), and walls of light with one gap. Every warning is shorter than book three's and
    every gap between attacks is smaller.
 
    **Everything it throws carries Corrupt II** — a whole heart of max health rather than half, down to
@@ -117,6 +116,25 @@ one hand can be in the air, because it is your hand.
 It is the only weapon whose cooldown starts *after* the swing rather than at the same time. That rule
 lives on the weapon (`swing`), so no other weapon was slowed by adding it.
 
+### Hard mode
+
+Every book you have finished grows a **lever above the first gate**. Throw it and the handle swings
+over; walk out of room one and it commits.
+
+| | |
+|---|---|
+| Enemy and boss damage | ×1.5 |
+| Enemy and boss health | ×1.25 |
+| At the boss's phase two | **five more** come in with it |
+
+Committing rebuilds the book from its definitions, so **everything you already killed on this visit
+stands back up** carrying the hard numbers. A book half-cleared on normal and half on hard would be
+two different games in one save.
+
+The damage multiplier rides on `dmgMul`, which every enemy reads at the moment it hits you. It has to
+be that rather than a `damage` field, because `damage` is not something they all have — servants and
+sirens keep theirs in a cfg table and the bosses write theirs at the call site.
+
 ### Book four — *Infinite Dungeon*
 
 Unchained when the dragon falls, and sitting after the sealed third book. There is no boss, no story
@@ -125,9 +143,8 @@ and no ending — only how far down you are willing to go.
 - **The rooms do not exist until you reach them.** Each is generated from a seed, flood-filled to
   prove it can be crossed, and **released the moment you leave it**. There is no `B` tile anywhere in
   this book: the door behind you is not locked, it is gone.
-- **Every fifteenth room is a boss.** Dragon King, Drowned Queen or The Kernel, drawn at random — the
-  Kernel rarest of the three, because it is book three's ending and turning up every other time would
-  spend it. The boss carries the Crypt Key like anything else down here. Landings come every ten, so
+- **Every fifteenth room is a boss.** Dragon King or Drowned Queen, drawn at random. The Kernel is not
+  down here — it is book three's ending and it happens once. The boss carries the Crypt Key like anything else down here. Landings come every ten, so
   rooms 30, 60 and 90 would be both; the landing keeps its room and the boss slides one deeper, which
   is why they arrive at 15, 31, 45, 61, 75, 91. Bosses take **half** the dungeon's stat curve — at the
   full multiplier a Kernel at room 61 is 3500 HP and a twenty minute fight. Killing one does not mark
@@ -336,6 +353,7 @@ does nothing, because bare hands deal zero damage.
 | Dragon King | 450 HP, phase 2 at 225 |
 | Drowned Queen | 600 HP, phase 2 at 300 |
 | The Kernel | 1200 HP, phase 2 at 600 |
+| Hard mode | ×1.5 damage · ×1.25 health · +5 at phase 2 |
 | Nullbyte | 40 HP · 8 damage · untouchable while it corrupts |
 | Corruption | −half a heart of MAX health per hit, down to 7.5 hearts |
 | Digital Claw Cannon | 6 melee / 18 thrown · 2% drop from a Nullbyte |

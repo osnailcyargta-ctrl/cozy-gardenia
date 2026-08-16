@@ -104,6 +104,7 @@ export const BOOK1_ROOMS = [
     mood: { fog: 0.4, vignette: 1.05, ambient: '#343048' },
     floor: 'stone',
     props: [
+      { type: 'lever', x: 456, y: 100 },
       { type: 'smelter', x: 72,  y: 128 },
       // Slot 1 holds the coal, slot 5 the ore — exactly enough for one sword
       // and not a scrap more.
@@ -218,6 +219,7 @@ export const BOOK2_ROOMS = [
     mood: { fog: 0.5, vignette: 1.1, ambient: '#16323f' },
     floor: 'water',
     props: [
+      { type: 'lever', x: 456, y: 100 },
       // No chest here. This book only opens once book one is finished, and book
       // one cannot be finished without forging the sword — which the save keeps
       // for you across reloads.
@@ -349,6 +351,7 @@ export const BOOK3_ROOMS = [
     mood: { fog: 0.3, vignette: 1.06, ambient: '#1d3a2a' },
     floor: 'digital',
     props: [
+      { type: 'lever', x: 456, y: 100 },
       { type: 'void', x: 104, y: 168 },
       { type: 'void', x: 120, y: 200 },
       { type: 'void', x: 152, y: 72 },
@@ -543,14 +546,14 @@ export const BOOK3_ROOMS = [
 /**
  * The shelf. `needs` is the book you must finish before the chains come off —
  * book two expects you to arrive carrying the sword book one taught you to
- * make. `needsDepth` is book three's second lock: it also wants you to have got
- * ten rooms deep into the dungeon, so it opens to someone who has both finished
- * a story and survived something that has no ending.
+ * make. `needsHard` is book three's lock, and it is a different question from
+ * `needs`: not "have you finished this book" but "have you finished it on hard".
+ * The Kernel opens for someone who beat the Drowned Queen the hard way.
  */
 export const BOOKS = [
   { id: 0, title: 'Greedy Ass Dragon', rooms: BOOK1_ROOMS },
   { id: 1, title: 'Underwater Mommy', rooms: BOOK2_ROOMS, needs: 0 },
-  { id: 2, title: 'Digital Matrix', rooms: BOOK3_ROOMS, needs: 1, needsDepth: 10 },
+  { id: 2, title: 'Digital Matrix', rooms: BOOK3_ROOMS, needs: 1, needsHard: 1 },
   // Book four has no rooms table because its rooms do not exist until you walk
   // into them. `infinite` is what tells the rest of the game the difference
   // between "not written yet" and "never ends".

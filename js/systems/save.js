@@ -54,6 +54,18 @@ function flush() {
 
 export function cleared() { return new Set(data.cleared); }
 
+/**
+ * Books finished on hard. Kept apart from `cleared` because they answer
+ * different questions: one is "have you read this", the other is "have you read
+ * this the hard way", and book three only opens for the second.
+ */
+export function hardCleared() { return new Set(data.hardCleared || []); }
+
+export function markHardCleared(bookIndex) {
+  data.hardCleared = data.hardCleared || [];
+  if (!data.hardCleared.includes(bookIndex)) { data.hardCleared.push(bookIndex); flush(); }
+}
+
 export function markCleared(bookIndex) {
   if (!data.cleared.includes(bookIndex)) data.cleared.push(bookIndex);
   flush();

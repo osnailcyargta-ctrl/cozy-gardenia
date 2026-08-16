@@ -15,6 +15,11 @@ export const ITEM_DEFS = {
   // ---- book two ----
   coral_key: { id: 'coral_key', name: 'Coral Key', stack: 8, desc: 'Opens a drowned gate' },
 
+  reforge_coupon: {
+    id: 'reforge_coupon', name: 'Reforge Coupon', stack: 9,
+    desc: 'Spend instead of coins at an anvil',
+  },
+
   // ---- book three ----
   digital_claw_cannon: {
     id: 'digital_claw_cannon', name: 'Digital Claw Cannon', stack: 1,

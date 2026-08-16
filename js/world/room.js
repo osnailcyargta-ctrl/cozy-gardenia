@@ -177,6 +177,23 @@ export class Room {
     this.smelter = null;   // set by the game when this room has one
   }
 
+  /**
+   * Hard mode, applied to everything standing in the room. Damage and health
+   * move by different amounts on purpose: 1.5x damage is what you feel, 1.25x
+   * health is what stops the fight being the same length with bigger numbers.
+   */
+  applyHard() {
+    for (const e of this.enemies) {
+      e.maxHp = Math.round(e.maxHp * 1.25);
+      e.hp = e.maxHp;
+      // `damage` is not a field every enemy has — servants and sirens keep
+      // theirs in a cfg table and the bosses hard-code theirs at the call site.
+      // dmgMul is the one thing they all read, so it is the one thing set here.
+      if (typeof e.damage === 'number') e.damage = Math.round(e.damage * 1.5);
+      e.dmgMul = (e.dmgMul ?? 1) * 1.5;
+    }
+  }
+
   get hasSmelter() { return this.props.some((p) => p.type === 'smelter'); }
 
   /** Bosses declare themselves, so a new book doesn't need a new branch here. */
