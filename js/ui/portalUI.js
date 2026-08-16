@@ -3,8 +3,9 @@
 // Four numbers: book, room, tile x, tile y. Books and rooms are numbered the
 // way they are on the shelf and in the room label — starting at 1 — because
 // asking a player for a zero-based index is asking them to read the source.
-// Tiles are the map's own coordinates, so those start at 0, and **y counts
-// downward**: y + 1 is one tile further down the screen.
+//
+// The tile pair is measured **from the middle of the room**, so 0 0 is dead
+// centre, and **y minus is DOWN**: 0 -2 is two tiles below the middle.
 
 import { BOOKS } from '../data/rooms.js';
 import { sfx } from '../engine/audio.js';
@@ -56,12 +57,16 @@ export function validate(dest) {
     return `Book ${dest.book + 1} has ${b.rooms.length} rooms`;
   }
   const tiles = b.rooms[dest.room].tiles;
-  if (dest.ty < 0 || dest.ty >= tiles.length
-      || dest.tx < 0 || dest.tx >= tiles[0].length) {
-    return `Tiles are 0-${tiles[0].length - 1} across, 0-${tiles.length - 1} down`;
+  const W = tiles[0].length, H = tiles.length;
+  // back to the map's own indices, from an origin in the middle
+  const col = Math.floor(W / 2) + dest.tx;
+  const row = Math.floor(H / 2) - dest.ty;
+  if (col < 0 || col >= W || row < 0 || row >= H) {
+    const hx = Math.floor(W / 2), hy = Math.floor(H / 2);
+    return `From the middle: x ${-hx}..${W - hx - 1}, y ${hy - H + 1}..${hy}`;
   }
   // Landing inside a wall would be a hole you cannot climb out of.
-  if (tiles[dest.ty][dest.tx] === '#') return 'That tile is solid';
+  if (tiles[row][col] === '#') return 'That tile is solid';
   return null;
 }
 

@@ -3,19 +3,23 @@
 // Left click puts a portal on the floor and asks for four numbers: book, room,
 // and a tile. Walk into it and you come out there.
 //
-// The coordinate system is the tilemap's own, stated plainly because it is the
-// thing everyone gets wrong: **x and y are TILES, (0, 0) is the top-left corner
-// of the room, and y counts DOWNWARD.** y + 1 is one tile lower on the screen,
-// not one higher.
+// The coordinate system, stated plainly because it is the thing that gets got
+// wrong: **x and y are TILES measured from the MIDDLE of the room, and y MINUS
+// is DOWN.** (0, 0) is dead centre. (0, -1) is one tile below centre. (0, 1) is
+// one tile above it. (3, 0) is three tiles to the right of centre.
 
 import { addLight } from '../engine/postfx.js';
-import { TILE } from '../engine/canvas.js';
+import { TILE, VW, VH } from '../engine/canvas.js';
 import * as P from '../engine/particles.js';
 import { sfx } from '../engine/audio.js';
 
-/** Tile coordinates -> the pixel centre of that tile. */
+/**
+ * A destination in tiles from the middle of the room, to a pixel position.
+ * y is negated: minus is down the screen, which is the opposite of the raw
+ * canvas axis and is deliberate.
+ */
 export function tileCentre(tx, ty) {
-  return { x: tx * TILE + TILE / 2, y: ty * TILE + TILE / 2 };
+  return { x: VW / 2 + tx * TILE, y: VH / 2 - ty * TILE };
 }
 
 /**

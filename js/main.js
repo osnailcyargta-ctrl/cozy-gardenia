@@ -490,7 +490,15 @@ const REGEN_AMOUNT = 5;
  * that is affordable — and routed to whichever of the two shapes this book uses.
  */
 function autosave() {
-  if (game.scene !== 'book' || game.rateRoom) return;
+  if (game.scene !== 'book') return;
+  // The satchel is saved wherever you are standing, including rooms that are
+  // not part of any book's table. Skipping the write entirely in one of those
+  // meant anything picked up there was gone on the next reload — which is the
+  // exact opposite of what saving every frame is for.
+  if (game.rateRoom) {
+    save.saveSatchel(game.inventory, hotbar.selectedIndex());
+    return;
+  }
   if (inDungeon()) {
     save.saveDungeon(game.bookIndex, game.milestone, game.inventory,
       hotbar.selectedIndex(), game.smelter);

@@ -91,6 +91,16 @@ export function savedHotbar() { return data.hotbar | 0; }
  * Snapshot the rooms of the book you are leaving. Called on the way out to the
  * library, which is the moment the player thinks of as "done for now".
  */
+/**
+ * Just what you are carrying, with no room state attached. For anywhere the
+ * player can stand that is not a room out of a book's table.
+ */
+export function saveSatchel(satchel, hotbarIndex) {
+  data.satchel = satchel.slots.map((sl) => (sl ? { ...sl } : null));
+  data.hotbar = hotbarIndex | 0;
+  flush();
+}
+
 export function saveBook(bookIndex, rooms, satchel, hotbarIndex, smelter) {
   data.books[bookIndex] = {
     rooms: rooms.map((room) => ({

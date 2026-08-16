@@ -121,14 +121,17 @@ lives on the weapon (`swing`), so no other weapon was slowed by adding it.
 The Kernel leaves one behind. Left click puts a portal on the floor and asks for four numbers:
 
 ```
-1 3 0 0    →  book 1, room 3, tile x 0, tile y 0
+1 3 0 0     →  book 1, room 3, dead centre of the room
+1 3 -3 -2   →  book 1, room 3, three tiles left and two tiles DOWN
 ```
 
-Books and rooms count from **1**, the way they are numbered on the shelf and in the room label. Tiles
-are the map's own coordinates, so they count from **0**, `(0, 0)` is the **top-left**, and **y counts
-downward** — `y + 1` is one tile lower on the screen. You can only aim at a book you have finished,
-and it refuses a tile that is off the map or solid, because that would be a hole you could not climb
-out of.
+Books and rooms count from **1**, the way they are numbered on the shelf and in the room label.
+
+The tile pair is measured **from the middle of the room** — `0 0` is dead centre — and **y minus is
+down**: `0 -2` is two tiles below the middle, `0 2` is two above it.
+
+You can only aim at a book you have finished, and it refuses a tile that is off the map or solid,
+because that would be a hole you could not climb out of.
 
 ### Hard mode
 
@@ -303,9 +306,10 @@ gone from the next book on the shelf.
 
 ### Saving, healing, and weight
 
-- **The run is written out every frame.** Measured before committing to it: the whole payload is about
-  126 bytes and a full write costs 0.01ms — a tenth of one percent of a 60fps frame. There is no
-  "save point" any more; there is no point at which you can lose anything.
+- **The run is written out every frame** — including your satchel, wherever you happen to be standing,
+  even somewhere that is not a room out of any book's table. Measured before committing to it: the
+  whole payload is about 126 bytes and a full write costs 0.01ms, a tenth of one percent of a 60fps
+  frame. There is no "save point" any more; there is no point at which you can lose anything.
 - **Half a heart every two seconds**, always, in every book.
 - **Hit-stop.** A blow that connects holds the world at 12% speed for 35ms, a critical for 70ms. It is
   one subtraction in the frame loop and it is most of what makes a hit feel like it landed.
